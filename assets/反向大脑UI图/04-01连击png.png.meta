@@ -2,7 +2,7 @@
   "ver": "1.0.27",
   "importer": "image",
   "imported": true,
-  "uuid": "d0d441a9-002a-4864-a1d0-9490d5a4a238",
+  "uuid": "d5de090a-567e-444f-b557-e943c4ab5a0c",
   "files": [
     ".json",
     ".png"
@@ -10,14 +10,14 @@
   "subMetas": {
     "6c48a": {
       "importer": "texture",
-      "uuid": "d0d441a9-002a-4864-a1d0-9490d5a4a238@6c48a",
-      "displayName": "02游戏首页",
+      "uuid": "d5de090a-567e-444f-b557-e943c4ab5a0c@6c48a",
+      "displayName": "04-01连击png",
       "id": "6c48a",
       "name": "texture",
       "userData": {
         "wrapModeS": "clamp-to-edge",
         "wrapModeT": "clamp-to-edge",
-        "imageUuidOrDatabaseUri": "d0d441a9-002a-4864-a1d0-9490d5a4a238",
+        "imageUuidOrDatabaseUri": "d5de090a-567e-444f-b557-e943c4ab5a0c",
         "isUuid": true,
         "visible": false,
         "minfilter": "linear",
@@ -34,21 +34,21 @@
     },
     "f9941": {
       "importer": "sprite-frame",
-      "uuid": "d0d441a9-002a-4864-a1d0-9490d5a4a238@f9941",
-      "displayName": "02游戏首页",
+      "uuid": "d5de090a-567e-444f-b557-e943c4ab5a0c@f9941",
+      "displayName": "04-01连击png",
       "id": "f9941",
       "name": "spriteFrame",
       "userData": {
         "trimThreshold": 1,
         "rotated": false,
-        "offsetX": 0,
-        "offsetY": 0,
-        "trimX": 0,
-        "trimY": 0,
-        "width": 940,
-        "height": 1672,
-        "rawWidth": 940,
-        "rawHeight": 1672,
+        "offsetX": 3.5,
+        "offsetY": 19,
+        "trimX": 265,
+        "trimY": 215,
+        "width": 731,
+        "height": 786,
+        "rawWidth": 1254,
+        "rawHeight": 1254,
         "borderTop": 0,
         "borderBottom": 0,
         "borderLeft": 0,
@@ -60,17 +60,17 @@
         "meshType": 0,
         "vertices": {
           "rawPosition": [
-            -470,
-            -836,
+            -365.5,
+            -393,
             0,
-            470,
-            -836,
+            365.5,
+            -393,
             0,
-            -470,
-            836,
+            -365.5,
+            393,
             0,
-            470,
-            836,
+            365.5,
+            393,
             0
           ],
           "indexes": [
@@ -82,38 +82,38 @@
             3
           ],
           "uv": [
-            0,
-            1672,
-            940,
-            1672,
-            0,
-            0,
-            940,
-            0
+            265,
+            1039,
+            996,
+            1039,
+            265,
+            253,
+            996,
+            253
           ],
           "nuv": [
-            0,
-            0,
-            1,
-            0,
-            0,
-            1,
-            1,
-            1
+            0.2113237639553429,
+            0.20175438596491227,
+            0.7942583732057417,
+            0.20175438596491227,
+            0.2113237639553429,
+            0.828548644338118,
+            0.7942583732057417,
+            0.828548644338118
           ],
           "minPos": [
-            -470,
-            -836,
+            -365.5,
+            -393,
             0
           ],
           "maxPos": [
-            470,
-            836,
+            365.5,
+            393,
             0
           ]
         },
         "isUuid": true,
-        "imageUuidOrDatabaseUri": "d0d441a9-002a-4864-a1d0-9490d5a4a238@6c48a",
+        "imageUuidOrDatabaseUri": "d5de090a-567e-444f-b557-e943c4ab5a0c@6c48a",
         "atlasUuid": "",
         "trimType": "auto"
       },
@@ -128,7 +128,7 @@
   "userData": {
     "type": "sprite-frame",
     "fixAlphaTransparencyArtifacts": false,
-    "hasAlpha": false,
-    "redirect": "d0d441a9-002a-4864-a1d0-9490d5a4a238@6c48a"
+    "hasAlpha": true,
+    "redirect": "d5de090a-567e-444f-b557-e943c4ab5a0c@6c48a"
   }
 }
