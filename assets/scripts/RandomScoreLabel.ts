@@ -4,13 +4,13 @@ const { ccclass, property } = _decorator;
 
 @ccclass("RandomScoreLabel")
 export class RandomScoreLabel extends Component {
-  @property(Label)
+  @property({ type: Label, displayName: "目标文本" })
   public targetLabel: Label | null = null;
 
-  @property
+  @property({ displayName: "随机最大分数" })
   public maxScore = 5000;
 
-  @property
+  @property({ displayName: "开始时随机分数" })
   public randomizeOnStart = true;
 
   start() {

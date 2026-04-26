@@ -4,10 +4,10 @@ const { ccclass, property } = _decorator;
 
 @ccclass("LoadingProgressMask")
 export class LoadingProgressMask extends Component {
-  @property({ displayName: "起始X坐标" })
+  @property({ displayName: "起始 X 坐标" })
   public startX = -271.426;
 
-  @property({ displayName: "结束X坐标" })
+  @property({ displayName: "结束 X 坐标" })
   public endX = 275.129;
 
   @property({ displayName: "目标场景名" })

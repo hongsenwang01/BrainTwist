@@ -4,16 +4,16 @@ const { ccclass, property } = _decorator;
 
 @ccclass("GameTimerLabel")
 export class GameTimerLabel extends Component {
-  @property(Label)
+  @property({ type: Label, displayName: "目标文本" })
   public targetLabel: Label | null = null;
 
-  @property
+  @property({ displayName: "自动开始计时" })
   public autoStart = true;
 
-  @property
+  @property({ displayName: "起始秒数" })
   public startSeconds = 0;
 
-  @property
+  @property({ displayName: "最少显示位数" })
   public minDigits = 1;
 
   private elapsedSeconds = 0;

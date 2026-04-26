@@ -4,10 +4,10 @@ const { ccclass, property } = _decorator;
 
 @ccclass("SceneLoadButton")
 export class SceneLoadButton extends Component {
-  @property
+  @property({ displayName: "目标场景名" })
   public sceneName = "游戏进行页面";
 
-  @property
+  @property({ displayName: "自动绑定点击" })
   public autoBindClick = true;
 
   start() {

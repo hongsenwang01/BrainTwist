@@ -33,22 +33,22 @@ type ArrowOption = {
 
 @ccclass("RandomArrowDisplay")
 export class RandomArrowDisplay extends Component {
-  @property(Sprite)
+  @property({ type: Sprite, displayName: "目标箭头图片" })
   public targetSprite: Sprite | null = null;
 
-  @property(SpriteFrame)
+  @property({ type: SpriteFrame, displayName: "上箭头图片" })
   public upArrow: SpriteFrame | null = null;
 
-  @property(SpriteFrame)
+  @property({ type: SpriteFrame, displayName: "下箭头图片" })
   public downArrow: SpriteFrame | null = null;
 
-  @property(SpriteFrame)
+  @property({ type: SpriteFrame, displayName: "左箭头图片" })
   public leftArrow: SpriteFrame | null = null;
 
-  @property(SpriteFrame)
+  @property({ type: SpriteFrame, displayName: "右箭头图片" })
   public rightArrow: SpriteFrame | null = null;
 
-  @property
+  @property({ displayName: "开始时随机显示" })
   public autoShowOnStart = true;
 
   private currentDirection = ArrowDirection.Right;

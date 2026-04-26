@@ -5,27 +5,31 @@ import {
   RandomArrowDisplay,
 } from "./RandomArrowDisplay";
 import { ComboShakeEffect } from "./ComboShakeEffect";
+import { LifeDisplay } from "./LifeDisplay";
 
 const { ccclass, property } = _decorator;
 
 @ccclass("ArrowGameController")
 export class ArrowGameController extends Component {
-  @property(RandomArrowDisplay)
+  @property({ type: RandomArrowDisplay, displayName: "箭头显示组件" })
   public arrowDisplay: RandomArrowDisplay | null = null;
 
-  @property(Label)
+  @property({ type: Label, displayName: "连击数字文本" })
   public comboLabel: Label | null = null;
 
-  @property(Label)
+  @property({ type: Label, displayName: "分数文本" })
   public scoreLabel: Label | null = null;
 
-  @property(ComboShakeEffect)
+  @property({ type: ComboShakeEffect, displayName: "连击震动效果" })
   public comboShakeEffect: ComboShakeEffect | null = null;
 
-  @property
+  @property({ type: LifeDisplay, displayName: "生命显示组件" })
+  public lifeDisplay: LifeDisplay | null = null;
+
+  @property({ displayName: "自动查找箭头组件" })
   public autoFindArrowDisplay = true;
 
-  @property
+  @property({ displayName: "点对后刷新箭头" })
   public refreshOnCorrectClick = true;
 
   private comboCount = 0;
@@ -96,6 +100,7 @@ export class ArrowGameController extends Component {
   ) {
     this.comboCount = 0;
     this.updateComboLabel();
+    this.lifeDisplay?.loseLife();
 
     warn(
       `ArrowGameController: wrong direction ${ArrowDirection[clickedDirection]}, expected ${ArrowDirection[correctDirection]}.`,

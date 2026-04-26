@@ -4,13 +4,13 @@ const { ccclass, property } = _decorator;
 
 @ccclass("ComboShakeEffect")
 export class ComboShakeEffect extends Component {
-  @property
+  @property({ displayName: "震动距离" })
   public shakeDistance = 8;
 
-  @property
+  @property({ displayName: "单段震动时间" })
   public stepDuration = 0.035;
 
-  @property
+  @property({ displayName: "放大倍率" })
   public scaleUp = 1.08;
 
   private originPosition = new Vec3();

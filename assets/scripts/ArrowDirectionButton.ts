@@ -6,13 +6,13 @@ const { ccclass, property } = _decorator;
 
 @ccclass("ArrowDirectionButton")
 export class ArrowDirectionButton extends Component {
-  @property({ type: Enum(ArrowDirection) })
+  @property({ type: Enum(ArrowDirection), displayName: "按钮方向" })
   public direction = ArrowDirection.Up;
 
-  @property(ArrowGameController)
+  @property({ type: ArrowGameController, displayName: "游戏控制器" })
   public gameController: ArrowGameController | null = null;
 
-  @property
+  @property({ displayName: "自动绑定触摸" })
   public autoBindTouch = false;
 
   start() {
