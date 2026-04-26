@@ -10,8 +10,11 @@ export class GameTimerLabel extends Component {
   @property({ displayName: "自动开始计时" })
   public autoStart = true;
 
-  @property({ displayName: "起始秒数" })
-  public startSeconds = 0;
+  @property({ displayName: "倒计时秒数" })
+  public startSeconds = 120;
+
+  @property({ displayName: "倒计时模式" })
+  public countdownMode = true;
 
   @property({ displayName: "最少显示位数" })
   public minDigits = 1;
@@ -19,6 +22,7 @@ export class GameTimerLabel extends Component {
   private elapsedSeconds = 0;
   private isRunning = false;
   private lastDisplaySeconds = -1;
+  private onCompleteCallback: (() => void) | null = null;
 
   onLoad() {
     this.targetLabel = this.targetLabel ?? this.node.getComponent(Label);
@@ -38,6 +42,11 @@ export class GameTimerLabel extends Component {
 
     this.elapsedSeconds += deltaTime;
     this.refreshLabel();
+
+    if (this.countdownMode && this.getRemainingSeconds() <= 0) {
+      this.isRunning = false;
+      this.onCompleteCallback?.();
+    }
   }
 
   public startTimer() {
@@ -49,7 +58,13 @@ export class GameTimerLabel extends Component {
   }
 
   public resetTimer(seconds = this.startSeconds) {
-    this.elapsedSeconds = Math.max(0, seconds);
+    if (this.countdownMode) {
+      this.startSeconds = this.normalizeCountdownSeconds(seconds);
+      this.elapsedSeconds = 0;
+    } else {
+      this.elapsedSeconds = Math.max(0, seconds);
+    }
+
     this.lastDisplaySeconds = -1;
     this.refreshLabel();
   }
@@ -63,8 +78,18 @@ export class GameTimerLabel extends Component {
     return Math.floor(this.elapsedSeconds);
   }
 
+  public getRemainingSeconds() {
+    return Math.max(0, Math.ceil(this.startSeconds - this.elapsedSeconds));
+  }
+
+  public setCompleteCallback(callback: (() => void) | null) {
+    this.onCompleteCallback = callback;
+  }
+
   private refreshLabel() {
-    const displaySeconds = Math.floor(this.elapsedSeconds);
+    const displaySeconds = this.countdownMode
+      ? this.getRemainingSeconds()
+      : Math.floor(this.elapsedSeconds);
     if (displaySeconds === this.lastDisplaySeconds) {
       return;
     }
@@ -76,5 +101,9 @@ export class GameTimerLabel extends Component {
         .toString()
         .padStart(Math.max(1, this.minDigits), "0");
     }
+  }
+
+  private normalizeCountdownSeconds(seconds: number) {
+    return seconds > 0 ? seconds : 120;
   }
 }

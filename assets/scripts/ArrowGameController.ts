@@ -20,6 +20,11 @@ import { PauseOverlay } from "./PauseOverlay";
 
 const { ccclass, property } = _decorator;
 
+enum ArrowClickRule {
+  Normal = 0,
+  Reverse = 1,
+}
+
 @ccclass("ArrowGameController")
 export class ArrowGameController extends Component {
   @property({ type: RandomArrowDisplay, displayName: "箭头显示组件" })
@@ -30,6 +35,15 @@ export class ArrowGameController extends Component {
 
   @property({ type: Label, displayName: "分数文本" })
   public scoreLabel: Label | null = null;
+
+  @property({ type: Label, displayName: "属性提示文本" })
+  public ruleLabel: Label | null = null;
+
+  @property({ displayName: "正常提示文字" })
+  public normalRuleText = "正常";
+
+  @property({ displayName: "异常提示文字" })
+  public reverseRuleText = "异常";
 
   @property({ type: ComboShakeEffect, displayName: "连击震动效果" })
   public comboShakeEffect: ComboShakeEffect | null = null;
@@ -71,6 +85,7 @@ export class ArrowGameController extends Component {
   private score = 0;
   private isPaused = false;
   private audioSource: AudioSource | null = null;
+  private currentRule = ArrowClickRule.Reverse;
 
   onLoad() {
     this.isPaused = this.startPaused;
@@ -78,12 +93,15 @@ export class ArrowGameController extends Component {
     this.setupArrowDisplay();
     this.updateComboLabel();
     this.updateScoreLabel();
+    this.refreshRule();
   }
 
   start() {
     this.setupArrowDisplay();
     this.updateComboLabel();
     this.updateScoreLabel();
+    this.updateRuleLabel();
+    this.gameTimer?.setCompleteCallback(() => this.endGame());
   }
 
   public clickUp() {
@@ -129,7 +147,7 @@ export class ArrowGameController extends Component {
     this.updateComboLabel();
     this.updateScoreLabel();
     this.lifeDisplay?.resetLives();
-    this.arrowDisplay?.showRandomArrow(false, false);
+    this.refreshQuestion(false);
     this.resumeGame();
     this.gameTimer?.restartTimer();
   }
@@ -156,7 +174,7 @@ export class ArrowGameController extends Component {
     }
 
     const currentDirection = this.arrowDisplay.getCurrentDirection();
-    const correctDirection = getOppositeArrowDirection(currentDirection);
+    const correctDirection = this.getCorrectDirection(currentDirection);
 
     if (clickedDirection === correctDirection) {
       this.handleCorrectClick();
@@ -164,6 +182,11 @@ export class ArrowGameController extends Component {
     }
 
     this.handleWrongClick(clickedDirection, correctDirection);
+  }
+
+  public endGame() {
+    this.isPaused = true;
+    this.gameTimer?.pauseTimer();
   }
 
   private handleCorrectClick() {
@@ -175,7 +198,7 @@ export class ArrowGameController extends Component {
     this.playCorrectClickSound();
 
     if (this.refreshOnCorrectClick) {
-      this.arrowDisplay?.showRandomArrow(true);
+      this.refreshQuestion(true);
     }
   }
 
@@ -185,8 +208,20 @@ export class ArrowGameController extends Component {
   ) {
     this.comboCount = 0;
     this.updateComboLabel();
-    this.lifeDisplay?.loseLife();
+    const remainingLives = this.lifeDisplay?.loseLife();
     this.playWrongClickSound();
+
+    if (remainingLives === 0) {
+      this.endGame();
+      warn(
+        `ArrowGameController: wrong direction ${ArrowDirection[clickedDirection]}, expected ${ArrowDirection[correctDirection]}.`,
+      );
+      return;
+    }
+
+    if (this.refreshOnCorrectClick) {
+      this.refreshQuestion(true);
+    }
 
     warn(
       `ArrowGameController: wrong direction ${ArrowDirection[clickedDirection]}, expected ${ArrowDirection[correctDirection]}.`,
@@ -225,6 +260,36 @@ export class ArrowGameController extends Component {
     return Math.max(0, Math.floor(score))
       .toString()
       .replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  }
+
+  private refreshQuestion(animated: boolean) {
+    this.arrowDisplay?.showRandomArrow(true, animated);
+    this.refreshRule();
+  }
+
+  private refreshRule() {
+    this.currentRule =
+      Math.random() < 0.5 ? ArrowClickRule.Normal : ArrowClickRule.Reverse;
+    this.updateRuleLabel();
+  }
+
+  private updateRuleLabel() {
+    if (!this.ruleLabel) {
+      return;
+    }
+
+    this.ruleLabel.string =
+      this.currentRule === ArrowClickRule.Normal
+        ? this.normalRuleText
+        : this.reverseRuleText;
+  }
+
+  private getCorrectDirection(currentDirection: ArrowDirection) {
+    if (this.currentRule === ArrowClickRule.Normal) {
+      return currentDirection;
+    }
+
+    return getOppositeArrowDirection(currentDirection);
   }
 
   private setupArrowDisplay() {
