@@ -1,4 +1,14 @@
-import { _decorator, Component, Enum, log, Sprite, SpriteFrame, warn } from "cc";
+import {
+  _decorator,
+  Component,
+  Enum,
+  Sprite,
+  SpriteFrame,
+  tween,
+  UITransform,
+  Vec3,
+  warn,
+} from "cc";
 
 const { ccclass, property } = _decorator;
 
@@ -28,7 +38,7 @@ export function getOppositeArrowDirection(direction: ArrowDirection) {
 
 type ArrowOption = {
   direction: ArrowDirection;
-  frame: SpriteFrame | null;
+  frames: SpriteFrame[];
 };
 
 @ccclass("RandomArrowDisplay")
@@ -36,25 +46,55 @@ export class RandomArrowDisplay extends Component {
   @property({ type: Sprite, displayName: "目标箭头图片" })
   public targetSprite: Sprite | null = null;
 
-  @property({ type: SpriteFrame, displayName: "上箭头图片" })
-  public upArrow: SpriteFrame | null = null;
+  @property({ type: [SpriteFrame], displayName: "上箭头图片列表" })
+  public upArrows: SpriteFrame[] = [];
 
-  @property({ type: SpriteFrame, displayName: "下箭头图片" })
-  public downArrow: SpriteFrame | null = null;
+  @property({ type: [SpriteFrame], displayName: "下箭头图片列表" })
+  public downArrows: SpriteFrame[] = [];
 
-  @property({ type: SpriteFrame, displayName: "左箭头图片" })
-  public leftArrow: SpriteFrame | null = null;
+  @property({ type: [SpriteFrame], displayName: "左箭头图片列表" })
+  public leftArrows: SpriteFrame[] = [];
 
-  @property({ type: SpriteFrame, displayName: "右箭头图片" })
-  public rightArrow: SpriteFrame | null = null;
+  @property({ type: [SpriteFrame], displayName: "右箭头图片列表" })
+  public rightArrows: SpriteFrame[] = [];
 
   @property({ displayName: "开始时随机显示" })
   public autoShowOnStart = true;
 
+  @property({ displayName: "按方向自动设置尺寸" })
+  public autoSizeByDirection = true;
+
+  @property({ displayName: "左右箭头宽度" })
+  public horizontalArrowWidth = 510;
+
+  @property({ displayName: "左右箭头高度" })
+  public horizontalArrowHeight = 510;
+
+  @property({ displayName: "上下箭头宽度" })
+  public verticalArrowWidth = 510;
+
+  @property({ displayName: "上下箭头高度" })
+  public verticalArrowHeight = 510;
+
+  @property({ displayName: "切换时播放滑动动画" })
+  public animateSwitch = true;
+
+  @property({ displayName: "滑动距离" })
+  public slideDistance = 520;
+
+  @property({ displayName: "滑出时间" })
+  public slideOutDuration = 0.16;
+
+  @property({ displayName: "滑入时间" })
+  public slideInDuration = 0.18;
+
   private currentDirection = ArrowDirection.Right;
+  private originPosition = new Vec3();
+  private isAnimating = false;
 
   onLoad() {
     this.targetSprite = this.targetSprite ?? this.node.getComponent(Sprite);
+    this.originPosition.set(this.node.position);
   }
 
   start() {
@@ -63,7 +103,11 @@ export class RandomArrowDisplay extends Component {
     }
   }
 
-  public showRandomArrow(avoidCurrentDirection = false) {
+  public showRandomArrow(avoidCurrentDirection = false, animated = this.animateSwitch) {
+    if (this.isAnimating) {
+      return;
+    }
+
     const options = this.getAvailableOptions();
     if (options.length === 0) {
       warn("RandomArrowDisplay: no arrow SpriteFrame is assigned.");
@@ -76,19 +120,34 @@ export class RandomArrowDisplay extends Component {
         : options;
 
     const option = randomOptions[Math.floor(Math.random() * randomOptions.length)];
-    this.showArrow(option.direction);
+    const spriteFrame = this.getRandomFrame(option.frames);
+    if (!spriteFrame) {
+      warn("RandomArrowDisplay: selected direction has no SpriteFrame.");
+      return;
+    }
+
+    this.showArrow(option.direction, animated, spriteFrame);
   }
 
-  public showArrow(direction: ArrowDirection) {
-    const spriteFrame = this.getSpriteFrame(direction);
+  public showArrow(
+    direction: ArrowDirection,
+    animated = false,
+    spriteFrame = this.getRandomFrame(this.getSpriteFrames(direction)),
+  ) {
     if (!this.targetSprite || !spriteFrame) {
       warn("RandomArrowDisplay: targetSprite or arrow SpriteFrame is missing.");
       return;
     }
 
+    if (animated) {
+      this.playSwitchAnimation(direction, spriteFrame);
+      return;
+    }
+
     this.currentDirection = direction;
     this.targetSprite.spriteFrame = spriteFrame;
-    log(`RandomArrowDisplay: show ${ArrowDirection[direction]}.`);
+    this.applyDirectionSize(direction);
+    this.node.setPosition(this.originPosition);
   }
 
   public getCurrentDirection() {
@@ -97,25 +156,113 @@ export class RandomArrowDisplay extends Component {
 
   private getAvailableOptions(): ArrowOption[] {
     return [
-      { direction: ArrowDirection.Up, frame: this.upArrow },
-      { direction: ArrowDirection.Down, frame: this.downArrow },
-      { direction: ArrowDirection.Left, frame: this.leftArrow },
-      { direction: ArrowDirection.Right, frame: this.rightArrow },
-    ].filter((option) => option.frame);
+      { direction: ArrowDirection.Up, frames: this.upArrows },
+      { direction: ArrowDirection.Down, frames: this.downArrows },
+      { direction: ArrowDirection.Left, frames: this.leftArrows },
+      { direction: ArrowDirection.Right, frames: this.rightArrows },
+    ].filter((option) => option.frames.length > 0);
   }
 
-  private getSpriteFrame(direction: ArrowDirection) {
+  private getSpriteFrames(direction: ArrowDirection) {
     switch (direction) {
       case ArrowDirection.Up:
-        return this.upArrow;
+        return this.upArrows;
       case ArrowDirection.Down:
-        return this.downArrow;
+        return this.downArrows;
       case ArrowDirection.Left:
-        return this.leftArrow;
+        return this.leftArrows;
       case ArrowDirection.Right:
-        return this.rightArrow;
+        return this.rightArrows;
       default:
-        return null;
+        return [];
     }
+  }
+
+  private playSwitchAnimation(direction: ArrowDirection, spriteFrame: SpriteFrame) {
+    if (!this.targetSprite) {
+      return;
+    }
+
+    this.isAnimating = true;
+    tween(this.node).stop();
+
+    const slideOutPosition = this.getSlideOutPosition(this.currentDirection);
+    const slideInStartPosition = this.getSlideInStartPosition(direction);
+
+    tween(this.node)
+      .to(this.slideOutDuration, { position: slideOutPosition })
+      .call(() => {
+        if (this.targetSprite) {
+          this.targetSprite.spriteFrame = spriteFrame;
+        }
+        this.currentDirection = direction;
+        this.applyDirectionSize(direction);
+        this.node.setPosition(slideInStartPosition);
+      })
+      .to(this.slideInDuration, { position: this.originPosition })
+      .call(() => {
+        this.node.setPosition(this.originPosition);
+        this.isAnimating = false;
+      })
+      .start();
+  }
+
+  private getSlideOutPosition(direction: ArrowDirection) {
+    const offset = this.getDirectionOffset(direction);
+    return new Vec3(
+      this.originPosition.x + offset.x,
+      this.originPosition.y + offset.y,
+      this.originPosition.z,
+    );
+  }
+
+  private getSlideInStartPosition(direction: ArrowDirection) {
+    const offset = this.getDirectionOffset(getOppositeArrowDirection(direction));
+    return new Vec3(
+      this.originPosition.x + offset.x,
+      this.originPosition.y + offset.y,
+      this.originPosition.z,
+    );
+  }
+
+  private getDirectionOffset(direction: ArrowDirection) {
+    switch (direction) {
+      case ArrowDirection.Up:
+        return new Vec3(0, this.slideDistance, 0);
+      case ArrowDirection.Down:
+        return new Vec3(0, -this.slideDistance, 0);
+      case ArrowDirection.Left:
+        return new Vec3(-this.slideDistance, 0, 0);
+      case ArrowDirection.Right:
+        return new Vec3(this.slideDistance, 0, 0);
+      default:
+        return Vec3.ZERO;
+    }
+  }
+
+  private applyDirectionSize(direction: ArrowDirection) {
+    if (!this.autoSizeByDirection) {
+      return;
+    }
+
+    const transform = this.node.getComponent(UITransform);
+    if (!transform) {
+      return;
+    }
+
+    if (direction === ArrowDirection.Left || direction === ArrowDirection.Right) {
+      transform.setContentSize(this.horizontalArrowWidth, this.horizontalArrowHeight);
+      return;
+    }
+
+    transform.setContentSize(this.verticalArrowWidth, this.verticalArrowHeight);
+  }
+
+  private getRandomFrame(frames: SpriteFrame[]) {
+    if (frames.length === 0) {
+      return null;
+    }
+
+    return frames[Math.floor(Math.random() * frames.length)];
   }
 }

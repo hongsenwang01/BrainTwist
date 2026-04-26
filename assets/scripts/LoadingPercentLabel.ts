@@ -1,20 +1,17 @@
-import { _decorator, Component, director, warn } from "cc";
+import { _decorator, Component, director, Label, warn } from "cc";
 
 const { ccclass, property } = _decorator;
 
-@ccclass("LoadingProgressMask")
-export class LoadingProgressMask extends Component {
-  @property({ displayName: "起始 X 坐标" })
-  public startX = -271.426;
-
-  @property({ displayName: "结束 X 坐标" })
-  public endX = 275.129;
+@ccclass("LoadingPercentLabel")
+export class LoadingPercentLabel extends Component {
+  @property({ type: Label, displayName: "百分比文本" })
+  public percentLabel: Label | null = null;
 
   @property({ displayName: "目标场景名" })
   public preloadSceneName = "";
 
-  @property({ displayName: "启动后自动播放" })
-  public autoPlayOnStart = true;
+  @property({ displayName: "启动后自动播放预览" })
+  public autoPlayPreviewOnStart = true;
 
   @property({ displayName: "预览时长" })
   public previewDuration = 2;
@@ -25,16 +22,12 @@ export class LoadingProgressMask extends Component {
   @property({ displayName: "加载完成后切场景" })
   public loadSceneWhenComplete = false;
 
-  private fixedY = 0;
-  private fixedZ = 0;
-  private isPreloading = false;
   private previewElapsed = 0;
   private isPreviewPlaying = false;
+  private isPreloading = false;
 
   onLoad() {
-    const position = this.node.position;
-    this.fixedY = position.y;
-    this.fixedZ = position.z;
+    this.percentLabel = this.percentLabel ?? this.node.getComponent(Label);
     this.setProgress(0);
   }
 
@@ -44,7 +37,7 @@ export class LoadingProgressMask extends Component {
       return;
     }
 
-    if (this.autoPlayOnStart) {
+    if (this.autoPlayPreviewOnStart) {
       this.playPreview();
     }
   }
@@ -70,8 +63,11 @@ export class LoadingProgressMask extends Component {
 
   public setProgress(progress: number) {
     const clampedProgress = Math.min(Math.max(progress, 0), 1);
-    const x = this.startX + (this.endX - this.startX) * clampedProgress;
-    this.node.setPosition(x, this.fixedY, this.fixedZ);
+    const percent = Math.round(clampedProgress * 100);
+
+    if (this.percentLabel) {
+      this.percentLabel.string = `${percent}%`;
+    }
   }
 
   public playPreview() {
@@ -86,7 +82,7 @@ export class LoadingProgressMask extends Component {
     }
 
     if (!sceneName) {
-      warn("LoadingProgressMask: preloadSceneName is empty.");
+      warn("LoadingPercentLabel: preloadSceneName is empty.");
       return;
     }
 
@@ -103,7 +99,7 @@ export class LoadingProgressMask extends Component {
         this.isPreloading = false;
 
         if (error) {
-          warn(`LoadingProgressMask: failed to preload scene "${sceneName}".`);
+          warn(`LoadingPercentLabel: failed to preload scene "${sceneName}".`);
           return;
         }
 

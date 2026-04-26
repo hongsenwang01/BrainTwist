@@ -1,11 +1,22 @@
-import { _decorator, Component, Label, Node, warn } from "cc";
+import {
+  _decorator,
+  AudioClip,
+  AudioSource,
+  Component,
+  director,
+  Label,
+  Node,
+  warn,
+} from "cc";
 import {
   ArrowDirection,
   getOppositeArrowDirection,
   RandomArrowDisplay,
 } from "./RandomArrowDisplay";
 import { ComboShakeEffect } from "./ComboShakeEffect";
+import { GameTimerLabel } from "./GameTimerLabel";
 import { LifeDisplay } from "./LifeDisplay";
+import { PauseOverlay } from "./PauseOverlay";
 
 const { ccclass, property } = _decorator;
 
@@ -26,16 +37,44 @@ export class ArrowGameController extends Component {
   @property({ type: LifeDisplay, displayName: "生命显示组件" })
   public lifeDisplay: LifeDisplay | null = null;
 
+  @property({ type: GameTimerLabel, displayName: "计时器组件" })
+  public gameTimer: GameTimerLabel | null = null;
+
+  @property({ type: PauseOverlay, displayName: "暂停弹窗" })
+  public pauseOverlay: PauseOverlay | null = null;
+
+  @property({ type: AudioClip, displayName: "错误点击音效" })
+  public wrongClickSound: AudioClip | null = null;
+
+  @property({ type: AudioClip, displayName: "正确点击音效" })
+  public correctClickSound: AudioClip | null = null;
+
+  @property({ displayName: "错误音效音量" })
+  public wrongClickVolume = 1;
+
+  @property({ displayName: "正确音效音量" })
+  public correctClickVolume = 1;
+
   @property({ displayName: "自动查找箭头组件" })
   public autoFindArrowDisplay = true;
 
   @property({ displayName: "点对后刷新箭头" })
   public refreshOnCorrectClick = true;
 
+  @property({ displayName: "开始时暂停" })
+  public startPaused = false;
+
+  @property({ displayName: "首页场景名" })
+  public homeSceneName = "游戏首页";
+
   private comboCount = 0;
   private score = 0;
+  private isPaused = false;
+  private audioSource: AudioSource | null = null;
 
   onLoad() {
+    this.isPaused = this.startPaused;
+    this.audioSource = this.getOrCreateAudioSource();
     this.setupArrowDisplay();
     this.updateComboLabel();
     this.updateScoreLabel();
@@ -63,7 +102,52 @@ export class ArrowGameController extends Component {
     this.handleDirectionClick(ArrowDirection.Right);
   }
 
+  public pauseGame() {
+    this.isPaused = true;
+    this.gameTimer?.pauseTimer();
+    this.pauseOverlay?.show();
+  }
+
+  public resumeGame() {
+    this.isPaused = false;
+    this.gameTimer?.startTimer();
+    this.pauseOverlay?.hide();
+  }
+
+  public togglePause() {
+    if (this.isPaused) {
+      this.resumeGame();
+      return;
+    }
+
+    this.pauseGame();
+  }
+
+  public restartGame() {
+    this.comboCount = 0;
+    this.score = 0;
+    this.updateComboLabel();
+    this.updateScoreLabel();
+    this.lifeDisplay?.resetLives();
+    this.arrowDisplay?.showRandomArrow(false, false);
+    this.resumeGame();
+    this.gameTimer?.restartTimer();
+  }
+
+  public backToHome() {
+    if (!this.homeSceneName) {
+      warn("ArrowGameController: homeSceneName is empty.");
+      return;
+    }
+
+    director.loadScene(this.homeSceneName);
+  }
+
   public handleDirectionClick(clickedDirection: ArrowDirection) {
+    if (this.isPaused) {
+      return;
+    }
+
     this.setupArrowDisplay();
 
     if (!this.arrowDisplay) {
@@ -88,6 +172,7 @@ export class ArrowGameController extends Component {
     this.updateComboLabel();
     this.updateScoreLabel();
     this.comboShakeEffect?.play();
+    this.playCorrectClickSound();
 
     if (this.refreshOnCorrectClick) {
       this.arrowDisplay?.showRandomArrow(true);
@@ -101,6 +186,7 @@ export class ArrowGameController extends Component {
     this.comboCount = 0;
     this.updateComboLabel();
     this.lifeDisplay?.loseLife();
+    this.playWrongClickSound();
 
     warn(
       `ArrowGameController: wrong direction ${ArrowDirection[clickedDirection]}, expected ${ArrowDirection[correctDirection]}.`,
@@ -163,5 +249,29 @@ export class ArrowGameController extends Component {
     }
 
     return null;
+  }
+
+  private playWrongClickSound() {
+    this.playOneShot(this.wrongClickSound, this.wrongClickVolume);
+  }
+
+  private playCorrectClickSound() {
+    this.playOneShot(this.correctClickSound, this.correctClickVolume);
+  }
+
+  private playOneShot(clip: AudioClip | null, volume: number) {
+    if (!clip) {
+      return;
+    }
+
+    this.getOrCreateAudioSource().playOneShot(clip, volume);
+  }
+
+  private getOrCreateAudioSource() {
+    let audioSource = this.node.getComponent(AudioSource);
+    if (!audioSource) {
+      audioSource = this.node.addComponent(AudioSource);
+    }
+    return audioSource;
   }
 }

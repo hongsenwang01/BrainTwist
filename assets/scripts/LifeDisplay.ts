@@ -1,4 +1,13 @@
-import { _decorator, Component, Sprite, SpriteFrame, tween, Vec3 } from "cc";
+import {
+  _decorator,
+  Component,
+  Node,
+  Sprite,
+  SpriteFrame,
+  tween,
+  UIOpacity,
+  Vec3,
+} from "cc";
 
 const { ccclass, property } = _decorator;
 
@@ -31,8 +40,21 @@ export class LifeDisplay extends Component {
   @property({ displayName: "回弹时间" })
   public settleDuration = 0.1;
 
+  @property({ displayName: "扣血时播放掉落动效" })
+  public playLoseLifeEffect = true;
+
+  @property({ displayName: "扣血掉落距离" })
+  public loseFallDistance = 45;
+
+  @property({ displayName: "扣血动效时间" })
+  public loseEffectDuration = 0.28;
+
+  @property({ displayName: "扣血缩小倍率" })
+  public loseShrinkScale = 0.35;
+
   private currentLives = 3;
   private originalScales: Vec3[] = [];
+  private originalPositions: Vec3[] = [];
 
   onLoad() {
     this.recordOriginalScales();
@@ -45,12 +67,21 @@ export class LifeDisplay extends Component {
 
   public resetLives(lives = this.maxLives) {
     this.currentLives = this.clampLives(lives);
+    this.resetHeartTransforms();
     this.refresh();
   }
 
   public loseLife(amount = 1) {
+    const previousLives = this.currentLives;
     this.currentLives = this.clampLives(this.currentLives - amount);
-    this.refresh();
+
+    if (this.playLoseLifeEffect && previousLives > this.currentLives) {
+      this.refresh(this.currentLives);
+      this.playLoseHeartEffect(previousLives - 1);
+    } else {
+      this.refresh();
+    }
+
     return this.currentLives;
   }
 
@@ -86,10 +117,14 @@ export class LifeDisplay extends Component {
     }
   }
 
-  private refresh() {
+  private refresh(skipIndex = -1) {
     for (let index = 0; index < this.heartSprites.length; index += 1) {
       const sprite = this.heartSprites[index];
       if (!sprite) {
+        continue;
+      }
+
+      if (index === skipIndex) {
         continue;
       }
 
@@ -106,5 +141,81 @@ export class LifeDisplay extends Component {
       const scale = sprite?.node.scale ?? Vec3.ONE;
       return new Vec3(scale.x || 1, scale.y || 1, scale.z || 1);
     });
+    this.originalPositions = this.heartSprites.map((sprite) => {
+      const position = sprite?.node.position ?? Vec3.ZERO;
+      return new Vec3(position.x, position.y, position.z);
+    });
+  }
+
+  private playLoseHeartEffect(index: number) {
+    const sprite = this.heartSprites[index];
+    if (!sprite) {
+      return;
+    }
+
+    const node = sprite.node;
+    const opacity = this.getOrCreateOpacity(node);
+    const originalPosition = this.originalPositions[index] ?? node.position.clone();
+    const originalScale = this.originalScales[index] ?? node.scale.clone();
+    const fallPosition = new Vec3(
+      originalPosition.x,
+      originalPosition.y - this.loseFallDistance,
+      originalPosition.z,
+    );
+    const shrinkScale = new Vec3(
+      originalScale.x * this.loseShrinkScale,
+      originalScale.y * this.loseShrinkScale,
+      originalScale.z,
+    );
+
+    tween(node).stop();
+    tween(opacity).stop();
+
+    sprite.spriteFrame = this.fullHeart;
+    node.setPosition(originalPosition);
+    node.setScale(originalScale);
+    opacity.opacity = 255;
+
+    tween(opacity).to(this.loseEffectDuration, { opacity: 0 }).start();
+
+    tween(node)
+      .to(this.loseEffectDuration, {
+        position: fallPosition,
+        scale: shrinkScale,
+      })
+      .call(() => {
+        sprite.spriteFrame = this.emptyHeart;
+        node.setPosition(originalPosition);
+        node.setScale(originalScale);
+        opacity.opacity = 255;
+      })
+      .start();
+  }
+
+  private resetHeartTransforms() {
+    this.recordOriginalScales();
+
+    for (let index = 0; index < this.heartSprites.length; index += 1) {
+      const sprite = this.heartSprites[index];
+      if (!sprite) {
+        continue;
+      }
+
+      const node = sprite.node;
+      const opacity = this.getOrCreateOpacity(node);
+      tween(node).stop();
+      tween(opacity).stop();
+      node.setPosition(this.originalPositions[index] ?? node.position);
+      node.setScale(this.originalScales[index] ?? node.scale);
+      opacity.opacity = 255;
+    }
+  }
+
+  private getOrCreateOpacity(node: Node) {
+    let opacity = node.getComponent(UIOpacity);
+    if (!opacity) {
+      opacity = node.addComponent(UIOpacity);
+    }
+    return opacity;
   }
 }
