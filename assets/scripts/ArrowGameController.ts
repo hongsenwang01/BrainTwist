@@ -17,6 +17,7 @@ import { ComboShakeEffect } from "./ComboShakeEffect";
 import { GameTimerLabel } from "./GameTimerLabel";
 import { LifeDisplay } from "./LifeDisplay";
 import { PauseOverlay } from "./PauseOverlay";
+import { GameResultStore } from "./GameResultStore";
 
 const { ccclass, property } = _decorator;
 
@@ -93,6 +94,12 @@ export class ArrowGameController extends Component {
   private isGameEnded = false;
   private audioSource: AudioSource | null = null;
   private currentRule = ArrowClickRule.Reverse;
+  private correctCount = 0;
+  private totalClickCount = 0;
+  private wrongCount = 0;
+  private maxCombo = 0;
+  private fastestReaction = Number.POSITIVE_INFINITY;
+  private questionStartedAt = 0;
 
   onLoad() {
     this.isPaused = this.startPaused;
@@ -101,6 +108,7 @@ export class ArrowGameController extends Component {
     this.updateComboLabel();
     this.updateScoreLabel();
     this.refreshRule();
+    this.questionStartedAt = Date.now();
   }
 
   start() {
@@ -152,6 +160,12 @@ export class ArrowGameController extends Component {
     this.isGameEnded = false;
     this.comboCount = 0;
     this.score = 0;
+    this.correctCount = 0;
+    this.totalClickCount = 0;
+    this.wrongCount = 0;
+    this.maxCombo = 0;
+    this.fastestReaction = Number.POSITIVE_INFINITY;
+    this.isGameEnded = false;
     this.updateComboLabel();
     this.updateScoreLabel();
     this.lifeDisplay?.resetLives();
@@ -174,6 +188,7 @@ export class ArrowGameController extends Component {
       return;
     }
 
+    this.totalClickCount += 1;
     this.setupArrowDisplay();
 
     if (!this.arrowDisplay) {
@@ -200,6 +215,7 @@ export class ArrowGameController extends Component {
     this.isGameEnded = true;
     this.isPaused = true;
     this.gameTimer?.pauseTimer();
+    this.saveGameResult();
 
     if (this.loadSummarySceneOnEnd) {
       this.loadGameSummaryScene();
@@ -208,6 +224,9 @@ export class ArrowGameController extends Component {
 
   private handleCorrectClick() {
     this.comboCount += 1;
+    this.correctCount += 1;
+    this.maxCombo = Math.max(this.maxCombo, this.comboCount);
+    this.updateFastestReaction();
     this.score += this.getScoreIncrement(this.comboCount);
     this.updateComboLabel();
     this.updateScoreLabel();
@@ -224,6 +243,7 @@ export class ArrowGameController extends Component {
     correctDirection: ArrowDirection,
   ) {
     this.comboCount = 0;
+    this.wrongCount += 1;
     this.updateComboLabel();
     const remainingLives = this.lifeDisplay?.loseLife();
     this.playWrongClickSound();
@@ -282,6 +302,7 @@ export class ArrowGameController extends Component {
   private refreshQuestion(animated: boolean) {
     this.arrowDisplay?.showRandomArrow(true, animated);
     this.refreshRule();
+    this.questionStartedAt = Date.now();
   }
 
   private refreshRule() {
@@ -355,6 +376,43 @@ export class ArrowGameController extends Component {
       audioSource = this.node.addComponent(AudioSource);
     }
     return audioSource;
+  }
+
+  private updateFastestReaction() {
+    if (this.questionStartedAt <= 0) {
+      return;
+    }
+
+    const reactionSeconds = (Date.now() - this.questionStartedAt) / 1000;
+    if (reactionSeconds > 0) {
+      this.fastestReaction = Math.min(this.fastestReaction, reactionSeconds);
+    }
+  }
+
+  private saveGameResult() {
+    const accuracy =
+      this.totalClickCount > 0
+        ? (this.correctCount / this.totalClickCount) * 100
+        : 0;
+    const historyBestScore = this.createMockHistoryBestScore(this.score);
+
+    GameResultStore.setResult({
+      score: this.score,
+      historyBestScore,
+      correctCount: this.correctCount,
+      accuracy,
+      fastestReaction: Number.isFinite(this.fastestReaction)
+        ? this.fastestReaction
+        : 0,
+      maxCombo: this.maxCombo,
+      durationSeconds: this.gameTimer?.getElapsedSeconds() ?? 0,
+      wrongCount: this.wrongCount,
+    });
+  }
+
+  private createMockHistoryBestScore(currentScore: number) {
+    const mockBase = 12823;
+    return Math.max(mockBase, currentScore);
   }
 
   private loadGameSummaryScene() {
