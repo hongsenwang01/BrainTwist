@@ -46,18 +46,22 @@ export class PauseOverlay extends Component {
   private popupOpacityComponent: UIOpacity | null = null;
   private maskGraphics: Graphics | null = null;
   private maskAlphaState = { value: 0 };
+  private isVisible = false;
 
   onLoad() {
     this.setup();
 
     if (this.hideOnLoad) {
+      this.isVisible = false;
       this.node.active = false;
     }
   }
 
   public show() {
     this.setup();
+    this.isVisible = true;
     this.node.active = true;
+    this.node.setSiblingIndex(this.node.parent ? this.node.parent.children.length - 1 : 0);
 
     if (this.opacity) {
       tween(this.opacity).stop();
@@ -99,6 +103,7 @@ export class PauseOverlay extends Component {
 
   public hide() {
     this.setup();
+    this.isVisible = false;
 
     if (this.opacity) {
       tween(this.opacity).stop();
@@ -130,6 +135,10 @@ export class PauseOverlay extends Component {
     }
 
     this.node.active = false;
+  }
+
+  public isShowing() {
+    return this.isVisible && this.node.activeInHierarchy;
   }
 
   private setup() {

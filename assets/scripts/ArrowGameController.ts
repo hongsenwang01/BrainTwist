@@ -123,7 +123,7 @@ export class ArrowGameController extends Component {
   public pauseGame() {
     this.isPaused = true;
     this.gameTimer?.pauseTimer();
-    this.pauseOverlay?.show();
+    this.scheduleOnce(() => this.pauseOverlay?.show(), 0);
   }
 
   public resumeGame() {
@@ -133,7 +133,7 @@ export class ArrowGameController extends Component {
   }
 
   public togglePause() {
-    if (this.isPaused) {
+    if (this.pauseOverlay?.isShowing()) {
       this.resumeGame();
       return;
     }
