@@ -2,7 +2,7 @@
   "ver": "1.0.27",
   "importer": "image",
   "imported": true,
-  "uuid": "277c406f-d63a-44a5-a3e5-d501aaf7ee91",
+  "uuid": "43b4dc0a-33c6-4613-b4bd-8bf19ec6bee4",
   "files": [
     ".json",
     ".png"
@@ -10,14 +10,14 @@
   "subMetas": {
     "6c48a": {
       "importer": "texture",
-      "uuid": "277c406f-d63a-44a5-a3e5-d501aaf7ee91@6c48a",
-      "displayName": "05游戏总结",
+      "uuid": "43b4dc0a-33c6-4613-b4bd-8bf19ec6bee4@6c48a",
+      "displayName": "05-02最大连击图标",
       "id": "6c48a",
       "name": "texture",
       "userData": {
         "wrapModeS": "clamp-to-edge",
         "wrapModeT": "clamp-to-edge",
-        "imageUuidOrDatabaseUri": "277c406f-d63a-44a5-a3e5-d501aaf7ee91",
+        "imageUuidOrDatabaseUri": "43b4dc0a-33c6-4613-b4bd-8bf19ec6bee4",
         "isUuid": true,
         "visible": false,
         "minfilter": "linear",
@@ -34,21 +34,21 @@
     },
     "f9941": {
       "importer": "sprite-frame",
-      "uuid": "277c406f-d63a-44a5-a3e5-d501aaf7ee91@f9941",
-      "displayName": "05游戏总结",
+      "uuid": "43b4dc0a-33c6-4613-b4bd-8bf19ec6bee4@f9941",
+      "displayName": "05-02最大连击图标",
       "id": "f9941",
       "name": "spriteFrame",
       "userData": {
         "trimThreshold": 1,
         "rotated": false,
-        "offsetX": 0,
-        "offsetY": 0,
-        "trimX": 0,
-        "trimY": 0,
-        "width": 940,
-        "height": 1672,
-        "rawWidth": 940,
-        "rawHeight": 1672,
+        "offsetX": 1.5,
+        "offsetY": 18,
+        "trimX": 281,
+        "trimY": 183,
+        "width": 695,
+        "height": 852,
+        "rawWidth": 1254,
+        "rawHeight": 1254,
         "borderTop": 0,
         "borderBottom": 0,
         "borderLeft": 0,
@@ -60,17 +60,17 @@
         "meshType": 0,
         "vertices": {
           "rawPosition": [
-            -470,
-            -836,
+            -347.5,
+            -426,
             0,
-            470,
-            -836,
+            347.5,
+            -426,
             0,
-            -470,
-            836,
+            -347.5,
+            426,
             0,
-            470,
-            836,
+            347.5,
+            426,
             0
           ],
           "indexes": [
@@ -82,38 +82,38 @@
             3
           ],
           "uv": [
-            0,
-            1672,
-            940,
-            1672,
-            0,
-            0,
-            940,
-            0
+            281,
+            1071,
+            976,
+            1071,
+            281,
+            219,
+            976,
+            219
           ],
           "nuv": [
-            0,
-            0,
-            1,
-            0,
-            0,
-            1,
-            1,
-            1
+            0.2240829346092504,
+            0.17464114832535885,
+            0.7783094098883573,
+            0.17464114832535885,
+            0.2240829346092504,
+            0.854066985645933,
+            0.7783094098883573,
+            0.854066985645933
           ],
           "minPos": [
-            -470,
-            -836,
+            -347.5,
+            -426,
             0
           ],
           "maxPos": [
-            470,
-            836,
+            347.5,
+            426,
             0
           ]
         },
         "isUuid": true,
-        "imageUuidOrDatabaseUri": "277c406f-d63a-44a5-a3e5-d501aaf7ee91@6c48a",
+        "imageUuidOrDatabaseUri": "43b4dc0a-33c6-4613-b4bd-8bf19ec6bee4@6c48a",
         "atlasUuid": "",
         "trimType": "auto"
       },
@@ -128,7 +128,7 @@
   "userData": {
     "type": "sprite-frame",
     "fixAlphaTransparencyArtifacts": false,
-    "hasAlpha": false,
-    "redirect": "277c406f-d63a-44a5-a3e5-d501aaf7ee91@6c48a"
+    "hasAlpha": true,
+    "redirect": "43b4dc0a-33c6-4613-b4bd-8bf19ec6bee4@6c48a"
   }
 }

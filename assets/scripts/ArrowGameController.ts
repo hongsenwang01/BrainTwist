@@ -81,9 +81,16 @@ export class ArrowGameController extends Component {
   @property({ displayName: "首页场景名" })
   public homeSceneName = "游戏首页";
 
+  @property({ displayName: "游戏总结场景名" })
+  public gameSummarySceneName = "游戏总结";
+
+  @property({ displayName: "结束后切到总结页" })
+  public loadSummarySceneOnEnd = true;
+
   private comboCount = 0;
   private score = 0;
   private isPaused = false;
+  private isGameEnded = false;
   private audioSource: AudioSource | null = null;
   private currentRule = ArrowClickRule.Reverse;
 
@@ -142,6 +149,7 @@ export class ArrowGameController extends Component {
   }
 
   public restartGame() {
+    this.isGameEnded = false;
     this.comboCount = 0;
     this.score = 0;
     this.updateComboLabel();
@@ -162,7 +170,7 @@ export class ArrowGameController extends Component {
   }
 
   public handleDirectionClick(clickedDirection: ArrowDirection) {
-    if (this.isPaused) {
+    if (this.isPaused || this.isGameEnded) {
       return;
     }
 
@@ -185,8 +193,17 @@ export class ArrowGameController extends Component {
   }
 
   public endGame() {
+    if (this.isGameEnded) {
+      return;
+    }
+
+    this.isGameEnded = true;
     this.isPaused = true;
     this.gameTimer?.pauseTimer();
+
+    if (this.loadSummarySceneOnEnd) {
+      this.loadGameSummaryScene();
+    }
   }
 
   private handleCorrectClick() {
@@ -338,5 +355,14 @@ export class ArrowGameController extends Component {
       audioSource = this.node.addComponent(AudioSource);
     }
     return audioSource;
+  }
+
+  private loadGameSummaryScene() {
+    if (!this.gameSummarySceneName) {
+      warn("ArrowGameController: gameSummarySceneName is empty.");
+      return;
+    }
+
+    director.loadScene(this.gameSummarySceneName);
   }
 }

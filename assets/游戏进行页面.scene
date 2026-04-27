@@ -6876,6 +6876,8 @@
     "refreshOnCorrectClick": true,
     "startPaused": false,
     "homeSceneName": "游戏首页",
+    "gameSummarySceneName": "游戏总结",
+    "loadSummarySceneOnEnd": true,
     "_id": "1eptP7EPJCTK0kY7lVfJpx"
   },
   {
