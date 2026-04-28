@@ -17,7 +17,7 @@ import { ComboShakeEffect } from "./ComboShakeEffect";
 import { GameTimerLabel } from "./GameTimerLabel";
 import { LifeDisplay } from "./LifeDisplay";
 import { PauseOverlay } from "./PauseOverlay";
-import { GameResultStore } from "./GameResultStore";
+import { GameResultStore } from "../工具/GameResultStore";
 
 const { ccclass, property } = _decorator;
 

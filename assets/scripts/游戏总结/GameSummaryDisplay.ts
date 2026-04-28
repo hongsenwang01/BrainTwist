@@ -1,5 +1,5 @@
 import { _decorator, Component, Label } from "cc";
-import { GameResultData, GameResultStore } from "./GameResultStore";
+import { GameResultData, GameResultStore } from "../工具/GameResultStore";
 
 const { ccclass, property } = _decorator;
 
