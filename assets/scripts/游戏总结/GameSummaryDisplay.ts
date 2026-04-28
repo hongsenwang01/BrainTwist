@@ -1,5 +1,6 @@
 import { _decorator, Component, Label } from "cc";
 import { GameResultData, GameResultStore } from "../工具/GameResultStore";
+import { RollingNumberLabel } from "../工具/RollingNumberLabel";
 
 const { ccclass, property } = _decorator;
 
@@ -29,29 +30,47 @@ export class GameSummaryDisplay extends Component {
   @property({ type: Label, displayName: "失误次数文本" })
   public wrongCountLabel: Label | null = null;
 
+  @property({ displayName: "数字滚动整体延迟" })
+  public rollingStartDelay = 0.35;
+
+  @property({ displayName: "数字滚动错峰间隔" })
+  public rollingItemDelay = 0.12;
+
   start() {
     this.render(GameResultStore.getResult());
   }
 
   public render(result: GameResultData) {
-    this.setLabel(this.scoreLabel, this.formatNumber(result.score));
+    this.setLabel(this.scoreLabel, this.formatNumber(result.score), 0);
     this.setLabel(
       this.historyBestScoreLabel,
       this.formatNumber(result.historyBestScore),
+      0,
     );
-    this.setLabel(this.correctCountLabel, `${result.correctCount}`);
-    this.setLabel(this.accuracyLabel, `${Math.round(result.accuracy)}%`);
+    this.setLabel(this.correctCountLabel, `${result.correctCount}`, 0);
+    this.setLabel(this.accuracyLabel, `${Math.round(result.accuracy)}%`, 1);
     this.setLabel(
       this.fastestReactionLabel,
       result.fastestReaction > 0 ? result.fastestReaction.toFixed(2) : "--",
+      2,
     );
-    this.setLabel(this.maxComboLabel, `${result.maxCombo}`);
-    this.setLabel(this.durationLabel, this.formatDuration(result.durationSeconds));
-    this.setLabel(this.wrongCountLabel, `${result.wrongCount}`);
+    this.setLabel(this.maxComboLabel, `${result.maxCombo}`, 3);
+    this.setLabel(this.durationLabel, this.formatDuration(result.durationSeconds), 4);
+    this.setLabel(this.wrongCountLabel, `${result.wrongCount}`, 5);
   }
 
-  private setLabel(label: Label | null, text: string) {
+  private setLabel(label: Label | null, text: string, rollingIndex: number) {
     if (label) {
+      const rollingLabel = label.node.getComponent(RollingNumberLabel);
+      if (rollingLabel) {
+        rollingLabel.startDelay = Math.max(
+          0,
+          this.rollingStartDelay + rollingIndex * this.rollingItemDelay,
+        );
+        rollingLabel.playToText(text);
+        return;
+      }
+
       label.string = text;
     }
   }
