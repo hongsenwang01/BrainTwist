@@ -14,6 +14,7 @@ import {
   RandomArrowDisplay,
 } from "./RandomArrowDisplay";
 import { ComboShakeEffect } from "./ComboShakeEffect";
+import { ComboMotivationPrompt } from "./ComboMotivationPrompt";
 import { GameTimerLabel } from "./GameTimerLabel";
 import { LifeDisplay } from "./LifeDisplay";
 import { PauseOverlay } from "./PauseOverlay";
@@ -48,6 +49,9 @@ export class ArrowGameController extends Component {
 
   @property({ type: ComboShakeEffect, displayName: "连击震动效果" })
   public comboShakeEffect: ComboShakeEffect | null = null;
+
+  @property({ type: ComboMotivationPrompt, displayName: "连击激励提示" })
+  public comboMotivationPrompt: ComboMotivationPrompt | null = null;
 
   @property({ type: LifeDisplay, displayName: "生命显示组件" })
   public lifeDisplay: LifeDisplay | null = null;
@@ -169,6 +173,7 @@ export class ArrowGameController extends Component {
     this.updateComboLabel();
     this.updateScoreLabel();
     this.lifeDisplay?.resetLives();
+    this.comboMotivationPrompt?.resetTriggers();
     this.refreshQuestion(false);
     this.resumeGame();
     this.gameTimer?.restartTimer();
@@ -231,6 +236,7 @@ export class ArrowGameController extends Component {
     this.updateComboLabel();
     this.updateScoreLabel();
     this.comboShakeEffect?.play();
+    this.comboMotivationPrompt?.playForCombo(this.comboCount);
     this.playCorrectClickSound();
 
     if (this.refreshOnCorrectClick) {

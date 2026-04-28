@@ -52,7 +52,7 @@
     },
     "autoReleaseAssets": false,
     "_globals": {
-      "__id__": 174
+      "__id__": 183
     },
     "_id": "a9b0ba5d-9dfc-474e-aa2e-59907d3c74d8"
   },
@@ -75,19 +75,25 @@
     "_active": true,
     "_components": [
       {
-        "__id__": 169
+        "__id__": 176
       },
       {
-        "__id__": 170
+        "__id__": 177
       },
       {
-        "__id__": 171
+        "__id__": 178
       },
       {
-        "__id__": 172
+        "__id__": 179
       },
       {
-        "__id__": 173
+        "__id__": 180
+      },
+      {
+        "__id__": 181
+      },
+      {
+        "__id__": 182
       }
     ],
     "_prefab": null,
@@ -294,15 +300,18 @@
       },
       {
         "__id__": 125
+      },
+      {
+        "__id__": 167
       }
     ],
     "_active": true,
     "_components": [
       {
-        "__id__": 167
+        "__id__": 174
       },
       {
-        "__id__": 168
+        "__id__": 175
       }
     ],
     "_prefab": null,
@@ -5141,7 +5150,7 @@
         "__id__": 126
       }
     ],
-    "_active": true,
+    "_active": false,
     "_components": [
       {
         "__id__": 165
@@ -6700,6 +6709,156 @@
     "_id": "6eG5z95DRIRrAsr0hLsGdy"
   },
   {
+    "__type__": "cc.Node",
+    "_name": "激励提示层",
+    "_objFlags": 0,
+    "__editorExtras__": {},
+    "_parent": {
+      "__id__": 5
+    },
+    "_children": [],
+    "_active": true,
+    "_components": [
+      {
+        "__id__": 168
+      },
+      {
+        "__id__": 169
+      }
+    ],
+    "_prefab": null,
+    "_lpos": {
+      "__type__": "cc.Vec3",
+      "x": 221.065,
+      "y": 180.389,
+      "z": 0
+    },
+    "_lrot": {
+      "__type__": "cc.Quat",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1
+    },
+    "_lscale": {
+      "__type__": "cc.Vec3",
+      "x": 1,
+      "y": 1,
+      "z": 1
+    },
+    "_mobility": 0,
+    "_layer": 33554432,
+    "_euler": {
+      "__type__": "cc.Vec3",
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "_id": "3e/FC/C/RID73mp0O2JuGT"
+  },
+  {
+    "__type__": "cc.UITransform",
+    "_name": "",
+    "_objFlags": 0,
+    "__editorExtras__": {},
+    "node": {
+      "__id__": 167
+    },
+    "_enabled": true,
+    "__prefab": null,
+    "_contentSize": {
+      "__type__": "cc.Size",
+      "width": 100,
+      "height": 100
+    },
+    "_anchorPoint": {
+      "__type__": "cc.Vec2",
+      "x": 0.5,
+      "y": 0.5
+    },
+    "_id": "aaUqnTiMxALIkok8Fgt3uT"
+  },
+  {
+    "__type__": "5ca35K5Rt1GS5mI3hR4zkh0",
+    "_name": "",
+    "_objFlags": 0,
+    "__editorExtras__": {},
+    "node": {
+      "__id__": 167
+    },
+    "_enabled": true,
+    "__prefab": null,
+    "promptItems": [
+      {
+        "__id__": 170
+      },
+      {
+        "__id__": 171
+      },
+      {
+        "__id__": 172
+      },
+      {
+        "__id__": 173
+      }
+    ],
+    "displayParent": null,
+    "startOffsetX": 0,
+    "startOffsetY": 0,
+    "riseDistance": 70,
+    "fadeInDuration": 0.16,
+    "stayDuration": 0.45,
+    "fadeOutDuration": 0.36,
+    "startScale": 0.85,
+    "showScale": 1.08,
+    "settleScale": 1,
+    "endScale": 1.08,
+    "triggerOncePerGame": true,
+    "queuePrompts": true,
+    "queueInterval": 0.08,
+    "_id": "f2mcUmfklFoZPGgZALxjZx"
+  },
+  {
+    "__type__": "ComboMotivationPromptItem",
+    "comboCount": 1,
+    "spriteFrame": {
+      "__uuid__": "d6785020-63b2-4790-807a-4b974bf6e0f1@f9941",
+      "__expectedType__": "cc.SpriteFrame"
+    },
+    "width": 234,
+    "height": 168
+  },
+  {
+    "__type__": "ComboMotivationPromptItem",
+    "comboCount": 5,
+    "spriteFrame": {
+      "__uuid__": "0c846d1b-6279-4c5a-b9f6-a14f6c8e1cce@f9941",
+      "__expectedType__": "cc.SpriteFrame"
+    },
+    "width": 240,
+    "height": 136
+  },
+  {
+    "__type__": "ComboMotivationPromptItem",
+    "comboCount": 12,
+    "spriteFrame": {
+      "__uuid__": "9644dae2-4ce1-45a4-865a-1a5406d85bae@f9941",
+      "__expectedType__": "cc.SpriteFrame"
+    },
+    "width": 254,
+    "height": 132
+  },
+  {
+    "__type__": "ComboMotivationPromptItem",
+    "comboCount": 20,
+    "spriteFrame": {
+      "__uuid__": "2406a0e8-3de3-4120-9136-9dd92badc180@f9941",
+      "__expectedType__": "cc.SpriteFrame"
+    },
+    "width": 246,
+    "height": 140
+  },
+  {
     "__type__": "cc.UITransform",
     "_name": "",
     "_objFlags": 0,
@@ -6853,6 +7012,9 @@
     "comboShakeEffect": {
       "__id__": 58
     },
+    "comboMotivationPrompt": {
+      "__id__": 169
+    },
     "lifeDisplay": {
       "__id__": 124
     },
@@ -6898,30 +7060,75 @@
     "_id": "48zFc/BEVJd4/j4pWhBD3B"
   },
   {
+    "__type__": "47ac444aeZBzq2gasX5V9ag",
+    "_name": "",
+    "_objFlags": 0,
+    "__editorExtras__": {},
+    "node": {
+      "__id__": 2
+    },
+    "_enabled": true,
+    "__prefab": null,
+    "gameController": null,
+    "autoBindOnStart": true,
+    "minSwipeDistance": 50,
+    "directionRatio": 1.25,
+    "stopPropagationOnSwipe": true,
+    "autoFindGameController": true,
+    "_id": "6b9y/4xo9CVI+0DoNajB9U"
+  },
+  {
+    "__type__": "5ca35K5Rt1GS5mI3hR4zkh0",
+    "_name": "",
+    "_objFlags": 0,
+    "__editorExtras__": {},
+    "node": {
+      "__id__": 2
+    },
+    "_enabled": true,
+    "__prefab": null,
+    "promptItems": [],
+    "displayParent": null,
+    "startOffsetX": 0,
+    "startOffsetY": 0,
+    "riseDistance": 70,
+    "fadeInDuration": 0.16,
+    "stayDuration": 0.45,
+    "fadeOutDuration": 0.36,
+    "startScale": 0.85,
+    "showScale": 1.08,
+    "settleScale": 1,
+    "endScale": 1.08,
+    "triggerOncePerGame": true,
+    "queuePrompts": true,
+    "queueInterval": 0.08,
+    "_id": "eejP5xhndJnbBd8JYLCZIX"
+  },
+  {
     "__type__": "cc.SceneGlobals",
     "ambient": {
-      "__id__": 175
+      "__id__": 184
     },
     "shadows": {
-      "__id__": 176
+      "__id__": 185
     },
     "_skybox": {
-      "__id__": 177
+      "__id__": 186
     },
     "fog": {
-      "__id__": 178
+      "__id__": 187
     },
     "octree": {
-      "__id__": 179
+      "__id__": 188
     },
     "skin": {
-      "__id__": 180
+      "__id__": 189
     },
     "lightProbeInfo": {
-      "__id__": 181
+      "__id__": 190
     },
     "postSettings": {
-      "__id__": 182
+      "__id__": 191
     },
     "bakedWithStationaryMainLight": false,
     "bakedWithHighpLightmap": false
