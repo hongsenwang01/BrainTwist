@@ -18,6 +18,7 @@ import { ComboMotivationPrompt } from "./ComboMotivationPrompt";
 import { GameTimerLabel } from "./GameTimerLabel";
 import { LifeDisplay } from "./LifeDisplay";
 import { PauseOverlay } from "./PauseOverlay";
+import { BottomGlowParticleEmitter } from "./BottomGlowParticleEmitter";
 import { GameResultStore } from "../工具/GameResultStore";
 
 const { ccclass, property } = _decorator;
@@ -52,6 +53,9 @@ export class ArrowGameController extends Component {
 
   @property({ type: ComboMotivationPrompt, displayName: "连击激励提示" })
   public comboMotivationPrompt: ComboMotivationPrompt | null = null;
+
+  @property({ type: BottomGlowParticleEmitter, displayName: "底部发光粒子" })
+  public bottomGlowParticleEmitter: BottomGlowParticleEmitter | null = null;
 
   @property({ type: LifeDisplay, displayName: "生命显示组件" })
   public lifeDisplay: LifeDisplay | null = null;
@@ -237,6 +241,9 @@ export class ArrowGameController extends Component {
     this.updateScoreLabel();
     this.comboShakeEffect?.play();
     this.comboMotivationPrompt?.playForCombo(this.comboCount);
+    this.bottomGlowParticleEmitter?.playBurst(
+      Math.min(1.8, 0.45 + this.comboCount * 0.04),
+    );
     this.playCorrectClickSound();
 
     if (this.refreshOnCorrectClick) {
