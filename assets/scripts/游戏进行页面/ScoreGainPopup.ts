@@ -26,6 +26,12 @@ export class ScoreGainPopup extends Component {
   @property({ displayName: "起始偏移Y" })
   public startOffsetY = 0;
 
+  @property({ type: [Node], displayName: "随机起点节点列表" })
+  public startPointNodes: Node[] = [];
+
+  @property({ displayName: "起点随机半径" })
+  public startRandomRadius = 0;
+
   @property({ displayName: "上升距离" })
   public riseDistance = 48;
 
@@ -55,6 +61,9 @@ export class ScoreGainPopup extends Component {
 
   @property({ displayName: "字体颜色" })
   public fontColor = new Color(255, 226, 84, 255);
+
+  @property({ type: [Color], displayName: "随机字体颜色列表" })
+  public randomFontColors: Color[] = [];
 
   @property({ displayName: "加分前缀" })
   public prefix = "+";
@@ -127,7 +136,7 @@ export class ScoreGainPopup extends Component {
 
     const popupNode = this.createPopupNode(`${this.prefix}${safeScoreGain}${this.suffix}`);
     const opacity = popupNode.getComponent(UIOpacity)!;
-    const startPosition = new Vec3(this.startOffsetX, this.startOffsetY, 0);
+    const startPosition = this.getStartLocalPosition(popupNode.parent!);
 
     this.trackPopup(popupNode, opacity);
     popupNode.setPosition(startPosition);
@@ -336,12 +345,7 @@ export class ScoreGainPopup extends Component {
     label.string = text;
     label.fontSize = this.fontSize;
     label.lineHeight = this.lineHeight;
-    label.color = new Color(
-      this.fontColor.r,
-      this.fontColor.g,
-      this.fontColor.b,
-      this.fontColor.a,
-    );
+    label.color = this.getRandomFontColor();
     label.horizontalAlign = Label.HorizontalAlign.CENTER;
     label.verticalAlign = Label.VerticalAlign.CENTER;
     label.isBold = true;
@@ -358,6 +362,58 @@ export class ScoreGainPopup extends Component {
     }
 
     return target.position.clone();
+  }
+
+  private getStartLocalPosition(parent: Node) {
+    const validStartPoints = this.getValidStartPointNodes();
+    const basePosition =
+      validStartPoints.length > 0
+        ? this.getTargetLocalPosition(
+            parent,
+            validStartPoints[Math.floor(Math.random() * validStartPoints.length)],
+          )
+        : new Vec3(this.startOffsetX, this.startOffsetY, 0);
+
+    if (this.startRandomRadius <= 0) {
+      return basePosition;
+    }
+
+    const angle = Math.random() * Math.PI * 2;
+    const distance = Math.random() * this.startRandomRadius;
+    basePosition.x += Math.cos(angle) * distance;
+    basePosition.y += Math.sin(angle) * distance;
+    return basePosition;
+  }
+
+  private getValidStartPointNodes() {
+    if (!Array.isArray(this.startPointNodes)) {
+      this.startPointNodes = [];
+    }
+
+    return this.startPointNodes.filter((node) => isValid(node, true));
+  }
+
+  private getRandomFontColor() {
+    const colors = this.getRandomFontColors();
+    const sourceColor =
+      colors.length > 0
+        ? colors[Math.floor(Math.random() * colors.length)]
+        : this.fontColor;
+
+    return new Color(
+      sourceColor.r,
+      sourceColor.g,
+      sourceColor.b,
+      sourceColor.a,
+    );
+  }
+
+  private getRandomFontColors() {
+    if (!Array.isArray(this.randomFontColors)) {
+      this.randomFontColors = [];
+    }
+
+    return this.randomFontColors;
   }
 
   private getQuadraticBezierPoint(
