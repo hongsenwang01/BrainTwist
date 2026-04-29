@@ -92,6 +92,15 @@ export class ArrowGameController extends Component {
   @property({ displayName: "点对后刷新箭头" })
   public refreshOnCorrectClick = true;
 
+  @property({ displayName: "自动刷新箭头" })
+  public autoRefreshArrow = true;
+
+  @property({ displayName: "箭头刷新间隔" })
+  public arrowRefreshInterval = 2;
+
+  @property({ displayName: "未操作扣生命" })
+  public loseLifeOnMiss = true;
+
   @property({ displayName: "开始时暂停" })
   public startPaused = false;
 
@@ -129,6 +138,7 @@ export class ArrowGameController extends Component {
   private maxCombo = 0;
   private fastestReaction = Number.POSITIVE_INFINITY;
   private questionStartedAt = 0;
+  private questionAnswered = false;
   private scoreTweenState = { value: 0 };
   private scoreLabelOriginScale = new Vec3(1, 1, 1);
 
@@ -149,13 +159,16 @@ export class ArrowGameController extends Component {
     this.updateScoreLabel();
     this.updateRuleLabel();
     this.gameTimer?.setCompleteCallback(() => this.endGame());
+    this.startArrowRefreshLoop();
   }
 
   onDisable() {
+    this.stopArrowRefreshLoop();
     this.stopRunningFeedbackTweens();
   }
 
   onDestroy() {
+    this.stopArrowRefreshLoop();
     this.stopRunningFeedbackTweens();
   }
 
@@ -177,12 +190,14 @@ export class ArrowGameController extends Component {
 
   public pauseGame() {
     this.isPaused = true;
+    this.stopArrowRefreshLoop();
     this.gameTimer?.pauseTimer();
     this.scheduleOnce(() => this.pauseOverlay?.show(), 0);
   }
 
   public resumeGame() {
     this.isPaused = false;
+    this.startArrowRefreshLoop();
     this.gameTimer?.startTimer();
     this.pauseOverlay?.hide();
   }
@@ -216,6 +231,7 @@ export class ArrowGameController extends Component {
     this.refreshQuestion(false);
     this.resumeGame();
     this.gameTimer?.restartTimer();
+    this.startArrowRefreshLoop();
   }
 
   public backToHome() {
@@ -228,7 +244,7 @@ export class ArrowGameController extends Component {
   }
 
   public handleDirectionClick(clickedDirection: ArrowDirection) {
-    if (this.isPaused || this.isGameEnded) {
+    if (this.isPaused || this.isGameEnded || this.questionAnswered) {
       return;
     }
 
@@ -259,6 +275,7 @@ export class ArrowGameController extends Component {
     this.isGameEnded = true;
     this.isPaused = true;
     this.gameTimer?.pauseTimer();
+    this.stopArrowRefreshLoop();
     this.stopRunningFeedbackTweens();
     this.saveGameResult();
 
@@ -268,6 +285,7 @@ export class ArrowGameController extends Component {
   }
 
   private handleCorrectClick() {
+    this.questionAnswered = true;
     this.comboCount += 1;
     this.correctCount += 1;
     this.maxCombo = Math.max(this.maxCombo, this.comboCount);
@@ -289,7 +307,7 @@ export class ArrowGameController extends Component {
     );
     this.playCorrectClickSound();
 
-    if (this.refreshOnCorrectClick) {
+    if (!this.autoRefreshArrow && this.refreshOnCorrectClick) {
       this.refreshQuestion(true);
     }
   }
@@ -298,11 +316,8 @@ export class ArrowGameController extends Component {
     clickedDirection: ArrowDirection,
     correctDirection: ArrowDirection,
   ) {
-    this.comboCount = 0;
-    this.wrongCount += 1;
-    this.updateComboLabel();
-    const remainingLives = this.lifeDisplay?.loseLife();
-    this.playWrongClickSound();
+    this.questionAnswered = true;
+    const remainingLives = this.recordWrongAnswer();
 
     if (remainingLives === 0) {
       this.endGame();
@@ -312,13 +327,50 @@ export class ArrowGameController extends Component {
       return;
     }
 
-    if (this.refreshOnCorrectClick) {
+    if (!this.autoRefreshArrow && this.refreshOnCorrectClick) {
       this.refreshQuestion(true);
     }
 
     warn(
       `ArrowGameController: wrong direction ${ArrowDirection[clickedDirection]}, expected ${ArrowDirection[correctDirection]}.`,
     );
+  }
+
+  private handleMissedQuestion() {
+    if (this.questionAnswered) {
+      return;
+    }
+
+    this.totalClickCount += 1;
+    this.questionAnswered = true;
+    const remainingLives = this.recordMissedAnswer();
+
+    if (remainingLives === 0) {
+      this.endGame();
+    }
+  }
+
+  private recordWrongAnswer() {
+    this.comboCount = 0;
+    this.wrongCount += 1;
+    this.updateComboLabel();
+    const remainingLives = this.lifeDisplay?.loseLife();
+    this.playWrongClickSound();
+    return remainingLives;
+  }
+
+  private recordMissedAnswer() {
+    this.comboCount = 0;
+    this.wrongCount += 1;
+    this.updateComboLabel();
+
+    if (!this.loseLifeOnMiss) {
+      return undefined;
+    }
+
+    const remainingLives = this.lifeDisplay?.loseLife();
+    this.playWrongClickSound();
+    return remainingLives;
   }
 
   private updateComboLabel() {
@@ -426,6 +478,34 @@ export class ArrowGameController extends Component {
     this.arrowDisplay?.showRandomArrow(true, animated);
     this.refreshRule();
     this.questionStartedAt = Date.now();
+    this.questionAnswered = false;
+  }
+
+  private startArrowRefreshLoop() {
+    this.stopArrowRefreshLoop();
+
+    if (!this.autoRefreshArrow) {
+      return;
+    }
+
+    const interval = Math.max(0.1, this.arrowRefreshInterval);
+    this.schedule(this.advanceQuestionByTimer, interval);
+  }
+
+  private stopArrowRefreshLoop() {
+    this.unschedule(this.advanceQuestionByTimer);
+  }
+
+  private advanceQuestionByTimer() {
+    if (this.isPaused || this.isGameEnded) {
+      return;
+    }
+
+    this.handleMissedQuestion();
+
+    if (!this.isGameEnded) {
+      this.refreshQuestion(true);
+    }
   }
 
   private refreshRule() {
