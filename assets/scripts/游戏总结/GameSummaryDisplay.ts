@@ -1,6 +1,6 @@
 import { _decorator, Component, Label } from "cc";
 import { GameResultData, GameResultStore } from "../工具/GameResultStore";
-import { RollingNumberLabel } from "../工具/RollingNumberLabel";
+import { ScoreCountUpLabel } from "./ScoreCountUpLabel";
 
 const { ccclass, property } = _decorator;
 
@@ -30,47 +30,52 @@ export class GameSummaryDisplay extends Component {
   @property({ type: Label, displayName: "失误次数文本" })
   public wrongCountLabel: Label | null = null;
 
-  @property({ displayName: "数字滚动整体延迟" })
-  public rollingStartDelay = 0.35;
+  @property({ displayName: "分数增长整体延迟" })
+  public scoreCountUpStartDelay = 0.35;
 
-  @property({ displayName: "数字滚动错峰间隔" })
-  public rollingItemDelay = 0.12;
+  @property({ displayName: "历史分数延迟增加" })
+  public historyScoreExtraDelay = 0.12;
 
   start() {
     this.render(GameResultStore.getResult());
   }
 
   public render(result: GameResultData) {
-    this.setLabel(this.scoreLabel, this.formatNumber(result.score), 0);
-    this.setLabel(
+    this.setScoreLabel(this.scoreLabel, this.formatNumber(result.score), 0);
+    this.setScoreLabel(
       this.historyBestScoreLabel,
       this.formatNumber(result.historyBestScore),
-      0,
+      this.historyScoreExtraDelay,
     );
-    this.setLabel(this.correctCountLabel, `${result.correctCount}`, 0);
-    this.setLabel(this.accuracyLabel, `${Math.round(result.accuracy)}%`, 1);
+    this.setLabel(this.correctCountLabel, `${result.correctCount}`);
+    this.setLabel(this.accuracyLabel, `${Math.round(result.accuracy)}%`);
     this.setLabel(
       this.fastestReactionLabel,
       result.fastestReaction > 0 ? result.fastestReaction.toFixed(2) : "--",
-      2,
     );
-    this.setLabel(this.maxComboLabel, `${result.maxCombo}`, 3);
-    this.setLabel(this.durationLabel, this.formatDuration(result.durationSeconds), 4);
-    this.setLabel(this.wrongCountLabel, `${result.wrongCount}`, 5);
+    this.setLabel(this.maxComboLabel, `${result.maxCombo}`);
+    this.setLabel(this.durationLabel, this.formatDuration(result.durationSeconds));
+    this.setLabel(this.wrongCountLabel, `${result.wrongCount}`);
   }
 
-  private setLabel(label: Label | null, text: string, rollingIndex: number) {
+  private setScoreLabel(label: Label | null, text: string, extraDelay: number) {
     if (label) {
-      const rollingLabel = label.node.getComponent(RollingNumberLabel);
-      if (rollingLabel) {
-        rollingLabel.startDelay = Math.max(
+      const scoreCountUpLabel = label.node.getComponent(ScoreCountUpLabel);
+      if (scoreCountUpLabel) {
+        scoreCountUpLabel.startDelay = Math.max(
           0,
-          this.rollingStartDelay + rollingIndex * this.rollingItemDelay,
+          this.scoreCountUpStartDelay + extraDelay,
         );
-        rollingLabel.playToText(text);
+        scoreCountUpLabel.playToText(text);
         return;
       }
 
+      label.string = text;
+    }
+  }
+
+  private setLabel(label: Label | null, text: string) {
+    if (label) {
       label.string = text;
     }
   }

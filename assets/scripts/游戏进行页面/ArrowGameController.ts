@@ -19,6 +19,7 @@ import { GameTimerLabel } from "./GameTimerLabel";
 import { LifeDisplay } from "./LifeDisplay";
 import { PauseOverlay } from "./PauseOverlay";
 import { BottomGlowParticleEmitter } from "./BottomGlowParticleEmitter";
+import { ScoreGainPopup } from "./ScoreGainPopup";
 import { GameResultStore } from "../工具/GameResultStore";
 
 const { ccclass, property } = _decorator;
@@ -56,6 +57,9 @@ export class ArrowGameController extends Component {
 
   @property({ type: BottomGlowParticleEmitter, displayName: "底部发光粒子" })
   public bottomGlowParticleEmitter: BottomGlowParticleEmitter | null = null;
+
+  @property({ type: ScoreGainPopup, displayName: "加分提示" })
+  public scoreGainPopup: ScoreGainPopup | null = null;
 
   @property({ type: LifeDisplay, displayName: "生命显示组件" })
   public lifeDisplay: LifeDisplay | null = null;
@@ -236,11 +240,13 @@ export class ArrowGameController extends Component {
     this.correctCount += 1;
     this.maxCombo = Math.max(this.maxCombo, this.comboCount);
     this.updateFastestReaction();
-    this.score += this.getScoreIncrement(this.comboCount);
+    const scoreIncrement = this.getScoreIncrement(this.comboCount);
+    this.score += scoreIncrement;
     this.updateComboLabel();
     this.updateScoreLabel();
     this.comboShakeEffect?.play();
     this.comboMotivationPrompt?.playForCombo(this.comboCount);
+    this.scoreGainPopup?.play(scoreIncrement);
     this.bottomGlowParticleEmitter?.playBurst(
       Math.min(1.8, 0.45 + this.comboCount * 0.04),
     );
