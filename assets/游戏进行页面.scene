@@ -3021,7 +3021,7 @@
     "_prefab": null,
     "_lpos": {
       "__type__": "cc.Vec3",
-      "x": 240.593,
+      "x": 251.065,
       "y": 413.498,
       "z": 0
     },
@@ -3153,7 +3153,7 @@
     "_prefab": null,
     "_lpos": {
       "__type__": "cc.Vec3",
-      "x": 271.389,
+      "x": 281.861,
       "y": 413.498,
       "z": 0
     },
@@ -5493,8 +5493,8 @@
     "_prefab": null,
     "_lpos": {
       "__type__": "cc.Vec3",
-      "x": 4.206,
-      "y": 260.789,
+      "x": -194.763,
+      "y": 229.373,
       "z": 0
     },
     "_lrot": {
@@ -5573,6 +5573,13 @@
     },
     "prefix": "+",
     "suffix": "",
+    "flyToTarget": true,
+    "targetNode": {
+      "__id__": 22
+    },
+    "arcHeight": 140,
+    "flyDuration": 0.45,
+    "targetScale": 0.45,
     "_id": "1cvJEwvttICJe6mrSRnN6p"
   },
   {
@@ -5763,6 +5770,10 @@
     "homeSceneName": "游戏首页",
     "gameSummarySceneName": "游戏总结",
     "loadSummarySceneOnEnd": true,
+    "scoreRollDuration": 0.2,
+    "scorePopScale": 1.2,
+    "scorePopInDuration": 0.1,
+    "scorePopOutDuration": 0.12,
     "_id": "1eptP7EPJCTK0kY7lVfJpx"
   },
   {

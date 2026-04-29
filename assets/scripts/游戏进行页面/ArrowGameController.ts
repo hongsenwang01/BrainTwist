@@ -6,6 +6,9 @@ import {
   director,
   Label,
   Node,
+  Tween,
+  tween,
+  Vec3,
   warn,
 } from "cc";
 import {
@@ -21,6 +24,7 @@ import { PauseOverlay } from "./PauseOverlay";
 import { BottomGlowParticleEmitter } from "./BottomGlowParticleEmitter";
 import { ScoreGainPopup } from "./ScoreGainPopup";
 import { GameResultStore } from "../工具/GameResultStore";
+import { TextLetterSpacing } from "../工具/TextLetterSpacing";
 
 const { ccclass, property } = _decorator;
 
@@ -100,8 +104,21 @@ export class ArrowGameController extends Component {
   @property({ displayName: "结束后切到总结页" })
   public loadSummarySceneOnEnd = true;
 
+  @property({ displayName: "分数滚动时长" })
+  public scoreRollDuration = 0.28;
+
+  @property({ displayName: "分数弹出缩放" })
+  public scorePopScale = 1.16;
+
+  @property({ displayName: "分数弹出时间" })
+  public scorePopInDuration = 0.08;
+
+  @property({ displayName: "分数回缩时间" })
+  public scorePopOutDuration = 0.12;
+
   private comboCount = 0;
   private score = 0;
+  private displayedScore = 0;
   private isPaused = false;
   private isGameEnded = false;
   private audioSource: AudioSource | null = null;
@@ -112,10 +129,13 @@ export class ArrowGameController extends Component {
   private maxCombo = 0;
   private fastestReaction = Number.POSITIVE_INFINITY;
   private questionStartedAt = 0;
+  private scoreTweenState = { value: 0 };
+  private scoreLabelOriginScale = new Vec3(1, 1, 1);
 
   onLoad() {
     this.isPaused = this.startPaused;
     this.audioSource = this.getOrCreateAudioSource();
+    this.cacheScoreLabelOriginScale();
     this.setupArrowDisplay();
     this.updateComboLabel();
     this.updateScoreLabel();
@@ -129,6 +149,14 @@ export class ArrowGameController extends Component {
     this.updateScoreLabel();
     this.updateRuleLabel();
     this.gameTimer?.setCompleteCallback(() => this.endGame());
+  }
+
+  onDisable() {
+    this.stopRunningFeedbackTweens();
+  }
+
+  onDestroy() {
+    this.stopRunningFeedbackTweens();
   }
 
   public clickUp() {
@@ -172,6 +200,8 @@ export class ArrowGameController extends Component {
     this.isGameEnded = false;
     this.comboCount = 0;
     this.score = 0;
+    this.displayedScore = 0;
+    this.scoreTweenState.value = 0;
     this.correctCount = 0;
     this.totalClickCount = 0;
     this.wrongCount = 0;
@@ -179,7 +209,8 @@ export class ArrowGameController extends Component {
     this.fastestReaction = Number.POSITIVE_INFINITY;
     this.isGameEnded = false;
     this.updateComboLabel();
-    this.updateScoreLabel();
+    this.stopScoreTweens();
+    this.updateScoreLabel(0);
     this.lifeDisplay?.resetLives();
     this.comboMotivationPrompt?.resetTriggers();
     this.refreshQuestion(false);
@@ -228,6 +259,7 @@ export class ArrowGameController extends Component {
     this.isGameEnded = true;
     this.isPaused = true;
     this.gameTimer?.pauseTimer();
+    this.stopRunningFeedbackTweens();
     this.saveGameResult();
 
     if (this.loadSummarySceneOnEnd) {
@@ -242,11 +274,16 @@ export class ArrowGameController extends Component {
     this.updateFastestReaction();
     const scoreIncrement = this.getScoreIncrement(this.comboCount);
     this.score += scoreIncrement;
+    const targetScore = this.score;
     this.updateComboLabel();
-    this.updateScoreLabel();
     this.comboShakeEffect?.play();
     this.comboMotivationPrompt?.playForCombo(this.comboCount);
-    this.scoreGainPopup?.play(scoreIncrement);
+    const playScoreFeedback = () => this.playScoreIncreaseFeedback(targetScore);
+    if (this.scoreGainPopup) {
+      this.scoreGainPopup.play(scoreIncrement, playScoreFeedback);
+    } else {
+      playScoreFeedback();
+    }
     this.bottomGlowParticleEmitter?.playBurst(
       Math.min(1.8, 0.45 + this.comboCount * 0.04),
     );
@@ -290,9 +327,76 @@ export class ArrowGameController extends Component {
     }
   }
 
-  private updateScoreLabel() {
+  private updateScoreLabel(score = this.score) {
     if (this.scoreLabel) {
-      this.scoreLabel.string = this.formatScore(this.score);
+      this.scoreLabel.string = this.formatScore(score);
+      this.scoreLabel.node.getComponent(TextLetterSpacing)?.refresh();
+    }
+  }
+
+  private playScoreIncreaseFeedback(targetScore: number) {
+    if (!this.scoreLabel) {
+      this.displayedScore = targetScore;
+      return;
+    }
+
+    const scoreNode = this.scoreLabel.node;
+    this.stopScoreTweens();
+    const originScale = this.scoreLabelOriginScale.clone();
+    const peakScale = new Vec3(
+      originScale.x * this.scorePopScale,
+      originScale.y * this.scorePopScale,
+      originScale.z,
+    );
+    const fromScore = this.displayedScore;
+    const toScore = Math.max(fromScore, targetScore);
+
+    scoreNode.setScale(originScale);
+    this.scoreTweenState.value = fromScore;
+
+    tween(scoreNode)
+      .to(this.scorePopInDuration, { scale: peakScale }, { easing: "sineOut" })
+      .delay(this.scoreRollDuration)
+      .to(this.scorePopOutDuration, { scale: originScale }, { easing: "sineInOut" })
+      .call(() => scoreNode.setScale(originScale))
+      .start();
+
+    tween(this.scoreTweenState)
+      .delay(this.scorePopInDuration)
+      .to(
+        this.scoreRollDuration,
+        { value: toScore },
+        {
+          easing: "sineOut",
+          onUpdate: () => {
+            this.displayedScore = Math.floor(this.scoreTweenState.value);
+            this.updateScoreLabel(this.displayedScore);
+          },
+        },
+      )
+      .call(() => {
+        this.displayedScore = toScore;
+        this.updateScoreLabel(this.displayedScore);
+      })
+      .start();
+  }
+
+  private stopScoreTweens() {
+    Tween.stopAllByTarget(this.scoreTweenState);
+
+    if (this.scoreLabel) {
+      Tween.stopAllByTarget(this.scoreLabel.node);
+    }
+  }
+
+  private stopRunningFeedbackTweens() {
+    this.stopScoreTweens();
+    this.scoreGainPopup?.stopAll();
+  }
+
+  private cacheScoreLabelOriginScale() {
+    if (this.scoreLabel) {
+      this.scoreLabelOriginScale = this.scoreLabel.node.scale.clone();
     }
   }
 

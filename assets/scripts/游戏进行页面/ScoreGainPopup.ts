@@ -2,8 +2,10 @@ import {
   _decorator,
   Color,
   Component,
+  isValid,
   Label,
   Node,
+  Tween,
   tween,
   UIOpacity,
   UITransform,
@@ -11,6 +13,7 @@ import {
 } from "cc";
 
 const { ccclass, property } = _decorator;
+type FlyState = { progress: number };
 
 @ccclass("ScoreGainPopup")
 export class ScoreGainPopup extends Component {
@@ -59,7 +62,64 @@ export class ScoreGainPopup extends Component {
   @property({ displayName: "加分后缀" })
   public suffix = "";
 
-  public play(scoreGain: number) {
+  @property({ displayName: "飞向目标节点" })
+  public flyToTarget = false;
+
+  @property({ type: Node, displayName: "目标节点" })
+  public targetNode: Node | null = null;
+
+  @property({ displayName: "弧线高度" })
+  public arcHeight = 140;
+
+  @property({ displayName: "飞行时间" })
+  public flyDuration = 0.45;
+
+  @property({ displayName: "到达目标缩放" })
+  public targetScale = 0.45;
+
+  private activePopupNodes: Node[] = [];
+  private activeOpacities: UIOpacity[] = [];
+  private activeFlyStates: FlyState[] = [];
+
+  onDisable() {
+    this.stopAll();
+  }
+
+  onDestroy() {
+    this.stopAll();
+  }
+
+  public stopAll() {
+    const flyStates = this.getActiveFlyStates();
+    const opacities = this.getActiveOpacities();
+    const popupNodes = this.getActivePopupNodes();
+
+    for (let i = 0; i < flyStates.length; i += 1) {
+      const flyState = flyStates[i];
+      Tween.stopAllByTarget(flyState);
+    }
+
+    for (let i = 0; i < opacities.length; i += 1) {
+      const opacity = opacities[i];
+      if (isValid(opacity, true)) {
+        Tween.stopAllByTarget(opacity);
+      }
+    }
+
+    for (let i = 0; i < popupNodes.length; i += 1) {
+      const popupNode = popupNodes[i];
+      if (isValid(popupNode, true)) {
+        Tween.stopAllByTarget(popupNode);
+        popupNode.destroy();
+      }
+    }
+
+    this.activeFlyStates = [];
+    this.activeOpacities = [];
+    this.activePopupNodes = [];
+  }
+
+  public play(scoreGain: number, onComplete?: () => void) {
     const safeScoreGain = Math.max(0, Math.floor(scoreGain));
     if (safeScoreGain <= 0) {
       return;
@@ -68,15 +128,31 @@ export class ScoreGainPopup extends Component {
     const popupNode = this.createPopupNode(`${this.prefix}${safeScoreGain}${this.suffix}`);
     const opacity = popupNode.getComponent(UIOpacity)!;
     const startPosition = new Vec3(this.startOffsetX, this.startOffsetY, 0);
-    const endPosition = new Vec3(
-      this.startOffsetX,
-      this.startOffsetY + this.riseDistance,
-      0,
-    );
 
+    this.trackPopup(popupNode, opacity);
     popupNode.setPosition(startPosition);
     popupNode.setScale(this.startScale, this.startScale, 1);
     opacity.opacity = 0;
+
+    if (this.flyToTarget && this.targetNode) {
+      this.playFlyToTarget(popupNode, opacity, startPosition, onComplete);
+      return;
+    }
+
+    this.playFloatAndFade(popupNode, opacity, startPosition, onComplete);
+  }
+
+  private playFloatAndFade(
+    popupNode: Node,
+    opacity: UIOpacity,
+    startPosition: Vec3,
+    onComplete?: () => void,
+  ) {
+    const endPosition = new Vec3(
+      startPosition.x,
+      startPosition.y + this.riseDistance,
+      startPosition.z,
+    );
 
     tween(opacity)
       .to(this.fadeInDuration, { opacity: 255 })
@@ -104,8 +180,148 @@ export class ScoreGainPopup extends Component {
         },
         { easing: "sineIn" },
       )
-      .call(() => popupNode.destroy())
+      .call(() => {
+        this.finishPopup(popupNode, opacity);
+        onComplete?.();
+      })
       .start();
+  }
+
+  private playFlyToTarget(
+    popupNode: Node,
+    opacity: UIOpacity,
+    startPosition: Vec3,
+    onComplete?: () => void,
+  ) {
+    const settleDuration = 0.08;
+    const targetPosition = this.getTargetLocalPosition(popupNode.parent!, this.targetNode!);
+    const controlPosition = new Vec3(
+      (startPosition.x + targetPosition.x) * 0.5,
+      Math.max(startPosition.y, targetPosition.y) + this.arcHeight,
+      startPosition.z,
+    );
+    const flyState = { progress: 0 };
+    this.getActiveFlyStates().push(flyState);
+
+    tween(opacity)
+      .to(this.fadeInDuration, { opacity: 255 })
+      .delay(settleDuration + this.stayDuration)
+      .to(this.flyDuration, { opacity: 0 })
+      .start();
+
+    tween(popupNode)
+      .to(
+        this.fadeInDuration,
+        { scale: new Vec3(this.showScale, this.showScale, 1) },
+        { easing: "backOut" },
+      )
+      .to(
+        settleDuration,
+        { scale: new Vec3(this.settleScale, this.settleScale, 1) },
+        { easing: "sineOut" },
+      )
+      .delay(this.stayDuration)
+      .to(
+        this.flyDuration,
+        { scale: new Vec3(this.targetScale, this.targetScale, 1) },
+        { easing: "sineIn" },
+      )
+      .start();
+
+    tween(flyState)
+      .delay(this.fadeInDuration + settleDuration + this.stayDuration)
+      .to(
+        this.flyDuration,
+        { progress: 1 },
+        {
+          easing: "sineInOut",
+          onUpdate: () => {
+            if (!isValid(popupNode, true) || !popupNode.parent) {
+              Tween.stopAllByTarget(flyState);
+              return;
+            }
+
+            popupNode.setPosition(
+              this.getQuadraticBezierPoint(
+                startPosition,
+                controlPosition,
+                targetPosition,
+                flyState.progress,
+              ),
+            );
+          },
+        },
+      )
+      .call(() => {
+        this.untrackFlyState(flyState);
+        this.finishPopup(popupNode, opacity);
+        onComplete?.();
+      })
+      .start();
+  }
+
+  private trackPopup(popupNode: Node, opacity: UIOpacity) {
+    this.getActivePopupNodes().push(popupNode);
+    this.getActiveOpacities().push(opacity);
+  }
+
+  private finishPopup(popupNode: Node, opacity: UIOpacity) {
+    this.untrackNode(popupNode);
+    this.untrackOpacity(opacity);
+
+    if (isValid(opacity, true)) {
+      Tween.stopAllByTarget(opacity);
+    }
+
+    if (isValid(popupNode, true)) {
+      Tween.stopAllByTarget(popupNode);
+      popupNode.destroy();
+    }
+  }
+
+  private untrackNode(node: Node) {
+    const index = this.getActivePopupNodes().indexOf(node);
+    if (index >= 0) {
+      this.activePopupNodes.splice(index, 1);
+    }
+  }
+
+  private untrackOpacity(opacity: UIOpacity) {
+    const index = this.getActiveOpacities().indexOf(opacity);
+    if (index >= 0) {
+      this.activeOpacities.splice(index, 1);
+    }
+  }
+
+  private untrackFlyState(flyState: FlyState) {
+    const index = this.getActiveFlyStates().indexOf(flyState);
+    if (index >= 0) {
+      this.activeFlyStates.splice(index, 1);
+    }
+  }
+
+  private getActivePopupNodes() {
+    if (!Array.isArray(this.activePopupNodes)) {
+      this.activePopupNodes = [];
+    }
+
+    return this.activePopupNodes;
+  }
+
+  private getActiveOpacities() {
+    if (!Array.isArray(this.activeOpacities)) {
+      this.activeOpacities = [];
+    }
+
+    return this.activeOpacities;
+  }
+
+  private getActiveFlyStates() {
+    if (!Array.isArray(this.activeFlyStates)) {
+      this.activeFlyStates = [];
+    }
+
+    return this.activeFlyStates;
   }
 
   private createPopupNode(text: string) {
@@ -133,5 +349,33 @@ export class ScoreGainPopup extends Component {
 
     popupNode.addComponent(UIOpacity);
     return popupNode;
+  }
+
+  private getTargetLocalPosition(parent: Node, target: Node) {
+    const parentTransform = parent.getComponent(UITransform);
+    if (parentTransform) {
+      return parentTransform.convertToNodeSpaceAR(target.worldPosition);
+    }
+
+    return target.position.clone();
+  }
+
+  private getQuadraticBezierPoint(
+    start: Vec3,
+    control: Vec3,
+    end: Vec3,
+    progress: number,
+  ) {
+    const t = Math.max(0, Math.min(1, progress));
+    const oneMinusT = 1 - t;
+    return new Vec3(
+      oneMinusT * oneMinusT * start.x +
+        2 * oneMinusT * t * control.x +
+        t * t * end.x,
+      oneMinusT * oneMinusT * start.y +
+        2 * oneMinusT * t * control.y +
+        t * t * end.y,
+      start.z,
+    );
   }
 }
