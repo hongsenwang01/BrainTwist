@@ -6107,7 +6107,7 @@
     "autoFindArrowDisplay": true,
     "refreshOnCorrectClick": true,
     "autoRefreshArrow": true,
-    "arrowRefreshInterval": 2,
+    "arrowRefreshInterval": 1,
     "loseLifeOnMiss": false,
     "startPaused": false,
     "homeSceneName": "游戏首页",
