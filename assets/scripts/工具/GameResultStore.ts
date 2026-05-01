@@ -6,7 +6,14 @@ export type GameResultData = {
   fastestReaction: number;
   maxCombo: number;
   durationSeconds: number;
+  durationMs: number;
   wrongCount: number;
+  wrongInputCount: number;
+  missedCount: number;
+  totalQuestions: number;
+  remainingLives: number;
+  startedAt: string;
+  endedAt: string;
 };
 
 const emptyResult: GameResultData = {
@@ -17,7 +24,14 @@ const emptyResult: GameResultData = {
   fastestReaction: 0,
   maxCombo: 0,
   durationSeconds: 0,
+  durationMs: 0,
   wrongCount: 0,
+  wrongInputCount: 0,
+  missedCount: 0,
+  totalQuestions: 0,
+  remainingLives: 0,
+  startedAt: "",
+  endedAt: "",
 };
 
 export class GameResultStore {

@@ -1,8 +1,18 @@
-import { _decorator, Component, Label } from "cc";
+import { _decorator, Component, Label, sys, warn } from "cc";
 import { GameResultData, GameResultStore } from "../工具/GameResultStore";
 import { ScoreCountUpLabel } from "./ScoreCountUpLabel";
 
 const { ccclass, property } = _decorator;
+
+type SubmitScoreResponse = {
+  code: number;
+  message?: string;
+  data?: {
+    roundId?: string;
+    isNewBest?: boolean;
+    bestScore?: number;
+  };
+};
 
 @ccclass("GameSummaryDisplay")
 export class GameSummaryDisplay extends Component {
@@ -36,8 +46,36 @@ export class GameSummaryDisplay extends Component {
   @property({ displayName: "历史分数延迟增加" })
   public historyScoreExtraDelay = 0.12;
 
+  @property({ displayName: "自动上传成绩" })
+  public autoUploadScore = true;
+
+  @property({ displayName: "后端服务地址" })
+  public backendBaseUrl = "http://localhost:3000";
+
+  @property({ displayName: "提交成绩接口路径" })
+  public submitScoreApiPath = "/api/game-scores/submit";
+
+  @property({ displayName: "游戏标识" })
+  public gameKey = "reverse_brain";
+
+  @property({ displayName: "游戏模式" })
+  public gameMode = "classic";
+
+  @property({ displayName: "难度" })
+  public difficulty = "normal";
+
+  @property({ displayName: "客户端版本" })
+  public clientVersion = "dev";
+
+  private hasUploadedScore = false;
+
   start() {
-    this.render(GameResultStore.getResult());
+    const result = GameResultStore.getResult();
+    this.render(result);
+
+    if (this.autoUploadScore) {
+      void this.uploadScore(result);
+    }
   }
 
   public render(result: GameResultData) {
@@ -93,5 +131,102 @@ export class GameSummaryDisplay extends Component {
     return `${minutes.toString().padStart(2, "0")}:${restSeconds
       .toString()
       .padStart(2, "0")}`;
+  }
+
+  private async uploadScore(result: GameResultData) {
+    if (this.hasUploadedScore) {
+      return;
+    }
+
+    this.hasUploadedScore = true;
+
+    const userId = sys.localStorage.getItem("brain_twist_user_id");
+    if (!userId) {
+      warn("GameSummaryDisplay: userId is missing, skip score upload.");
+      return;
+    }
+
+    try {
+      const response = await fetch(this.createSubmitScoreUrl(), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(this.createSubmitScorePayload(userId, result)),
+      });
+
+      if (!response.ok) {
+        warn(`GameSummaryDisplay: score upload failed, status ${response.status}.`);
+        return;
+      }
+
+      const uploadResult = (await response.json()) as SubmitScoreResponse;
+      if (uploadResult.code !== 0 || !uploadResult.data) {
+        warn(
+          `GameSummaryDisplay: score upload failed, ${
+            uploadResult.message ?? "unknown error"
+          }.`,
+        );
+        return;
+      }
+
+      if (typeof uploadResult.data.bestScore === "number") {
+        this.setScoreLabel(
+          this.historyBestScoreLabel,
+          this.formatNumber(uploadResult.data.bestScore),
+          this.historyScoreExtraDelay,
+        );
+      }
+    } catch (error) {
+      warn(`GameSummaryDisplay: score upload request failed, ${String(error)}.`);
+    }
+  }
+
+  private createSubmitScorePayload(userId: string, result: GameResultData) {
+    return {
+      userId,
+      gameKey: this.gameKey,
+      gameMode: this.gameMode,
+      difficulty: this.difficulty,
+      score: Math.max(0, Math.floor(result.score)),
+      correctCount: Math.max(0, Math.floor(result.correctCount)),
+      wrongCount: Math.max(0, Math.floor(result.wrongCount)),
+      wrongInputCount: Math.max(0, Math.floor(result.wrongInputCount)),
+      missedCount: Math.max(0, Math.floor(result.missedCount)),
+      totalQuestions: Math.max(0, Math.floor(result.totalQuestions)),
+      accuracy: Math.max(0, Math.min(100, result.accuracy)),
+      maxCombo: Math.max(0, Math.floor(result.maxCombo)),
+      fastestReactionMs:
+        result.fastestReaction > 0 ? Math.round(result.fastestReaction * 1000) : null,
+      durationMs: Math.max(0, Math.floor(result.durationMs)),
+      remainingLives: Math.max(0, Math.floor(result.remainingLives)),
+      startedAt: result.startedAt || null,
+      endedAt: result.endedAt || new Date().toISOString(),
+      clientVersion: this.clientVersion,
+      deviceInfo: this.createDeviceInfo(),
+      extraData: {
+        durationSeconds: Math.max(0, Math.floor(result.durationSeconds)),
+        frontendHistoryBestScore: Math.max(0, Math.floor(result.historyBestScore)),
+      },
+    };
+  }
+
+  private createSubmitScoreUrl() {
+    const baseUrl = this.backendBaseUrl.replace(/\/+$/, "");
+    const path = this.submitScoreApiPath.startsWith("/")
+      ? this.submitScoreApiPath
+      : `/${this.submitScoreApiPath}`;
+    return `${baseUrl}${path}`;
+  }
+
+  private createDeviceInfo() {
+    const sysInfo = sys as unknown as Record<string, unknown>;
+    return {
+      platform: sysInfo.platform ?? "",
+      os: sysInfo.os ?? "",
+      language: sysInfo.language ?? "",
+      isBrowser: sys.isBrowser,
+      isMobile: sys.isMobile,
+    };
   }
 }

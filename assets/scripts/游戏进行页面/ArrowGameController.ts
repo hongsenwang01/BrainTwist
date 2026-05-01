@@ -135,9 +135,12 @@ export class ArrowGameController extends Component {
   private correctCount = 0;
   private totalClickCount = 0;
   private wrongCount = 0;
+  private wrongInputCount = 0;
+  private missedCount = 0;
   private maxCombo = 0;
   private fastestReaction = Number.POSITIVE_INFINITY;
   private questionStartedAt = 0;
+  private gameStartedAt = 0;
   private questionAnswered = false;
   private scoreTweenState = { value: 0 };
   private scoreLabelOriginScale = new Vec3(1, 1, 1);
@@ -150,7 +153,7 @@ export class ArrowGameController extends Component {
     this.updateComboLabel();
     this.updateScoreLabel();
     this.refreshRule();
-    this.questionStartedAt = Date.now();
+    this.startRoundClock();
   }
 
   start() {
@@ -220,6 +223,8 @@ export class ArrowGameController extends Component {
     this.correctCount = 0;
     this.totalClickCount = 0;
     this.wrongCount = 0;
+    this.wrongInputCount = 0;
+    this.missedCount = 0;
     this.maxCombo = 0;
     this.fastestReaction = Number.POSITIVE_INFINITY;
     this.isGameEnded = false;
@@ -229,6 +234,7 @@ export class ArrowGameController extends Component {
     this.lifeDisplay?.resetLives();
     this.comboMotivationPrompt?.resetTriggers();
     this.refreshQuestion(false);
+    this.startRoundClock();
     this.resumeGame();
     this.gameTimer?.restartTimer();
     this.startArrowRefreshLoop();
@@ -353,6 +359,7 @@ export class ArrowGameController extends Component {
   private recordWrongAnswer() {
     this.comboCount = 0;
     this.wrongCount += 1;
+    this.wrongInputCount += 1;
     this.updateComboLabel();
     const remainingLives = this.lifeDisplay?.loseLife();
     this.playWrongClickSound();
@@ -362,6 +369,7 @@ export class ArrowGameController extends Component {
   private recordMissedAnswer() {
     this.comboCount = 0;
     this.wrongCount += 1;
+    this.missedCount += 1;
     this.updateComboLabel();
 
     if (!this.loseLifeOnMiss) {
@@ -593,11 +601,16 @@ export class ArrowGameController extends Component {
   }
 
   private saveGameResult() {
+    const endedAt = Date.now();
+    const totalQuestions = this.correctCount + this.wrongInputCount + this.missedCount;
     const accuracy =
-      this.totalClickCount > 0
-        ? (this.correctCount / this.totalClickCount) * 100
+      totalQuestions > 0
+        ? (this.correctCount / totalQuestions) * 100
         : 0;
     const historyBestScore = this.createMockHistoryBestScore(this.score);
+    const durationMs = this.gameTimer
+      ? this.gameTimer.getElapsedSeconds() * 1000
+      : Math.max(0, endedAt - this.gameStartedAt);
 
     GameResultStore.setResult({
       score: this.score,
@@ -608,9 +621,22 @@ export class ArrowGameController extends Component {
         ? this.fastestReaction
         : 0,
       maxCombo: this.maxCombo,
-      durationSeconds: this.gameTimer?.getElapsedSeconds() ?? 0,
+      durationSeconds: Math.floor(durationMs / 1000),
+      durationMs,
       wrongCount: this.wrongCount,
+      wrongInputCount: this.wrongInputCount,
+      missedCount: this.missedCount,
+      totalQuestions,
+      remainingLives: this.lifeDisplay?.getCurrentLives() ?? 0,
+      startedAt: this.gameStartedAt > 0 ? new Date(this.gameStartedAt).toISOString() : "",
+      endedAt: new Date(endedAt).toISOString(),
     });
+  }
+
+  private startRoundClock() {
+    const now = Date.now();
+    this.gameStartedAt = now;
+    this.questionStartedAt = now;
   }
 
   private createMockHistoryBestScore(currentScore: number) {

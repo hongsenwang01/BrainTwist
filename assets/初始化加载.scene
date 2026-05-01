@@ -460,6 +460,12 @@
     "previewDuration": 4,
     "autoStartPreload": false,
     "loadSceneWhenComplete": true,
+    "guestLoginOnStart": true,
+    "backendBaseUrl": "http://localhost:3000",
+    "loginApiPath": "/api/auth/douyin-login",
+    "appId": "",
+    "clientVersion": "dev",
+    "continueWhenLoginFailed": true,
     "_id": "61QCaJ3+9HkaHlsMUYlS6n"
   },
   {
