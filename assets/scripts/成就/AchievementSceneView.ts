@@ -3,7 +3,9 @@ import {
   Button,
   Component,
   Label,
+  Mask,
   Node,
+  ScrollView,
   Sprite,
   SpriteFrame,
   UITransform,
@@ -59,6 +61,8 @@ type AchievementCache = {
 
 type RowTemplate = {
   baseY: number;
+  visualCenterX: number;
+  visualCenterY: number;
   mode: "flat" | "group";
   nodes: Partial<Record<RowPart, Node>>;
 };
@@ -92,10 +96,18 @@ const DEFAULT_ACHIEVEMENTS: AchievementItem[] = [
   },
 ];
 
-const ACHIEVEMENT_CACHE_KEY = "brain_twist_achievement_cache_v1";
+const ACHIEVEMENT_CACHE_KEY = "brain_twist_achievement_cache_v2";
 const ACHIEVEMENT_CACHE_DIRTY_KEY = "brain_twist_achievement_cache_dirty";
 const ROW_TOP_Y = 134;
+const ROW_HEIGHT = 106;
 const ROW_GAP = 125;
+const LIST_VIEW_WIDTH = 750;
+const LIST_VIEW_TOP_Y = 190;
+const LIST_VIEW_BOTTOM_Y = -548;
+const LIST_VIEW_HEIGHT = LIST_VIEW_TOP_Y - LIST_VIEW_BOTTOM_Y;
+const LIST_VIEW_CENTER_Y = (LIST_VIEW_TOP_Y + LIST_VIEW_BOTTOM_Y) * 0.5;
+const LIST_TOP_PADDING = LIST_VIEW_TOP_Y - ROW_TOP_Y - ROW_HEIGHT * 0.5;
+const LIST_BOTTOM_PADDING = 4;
 const TEMPLATE_NAMES = ["初来乍到", "一击即中", "百发百中", "连击达人", "反向大师", "无情大脑"];
 const CATEGORY_NODE_NAMES: Record<AchievementCategory, string> = {
   all: "分类-全部",
@@ -149,10 +161,14 @@ export class AchievementSceneView extends Component {
   private activeCategory: AchievementCategory = "all";
   private rowTemplate: RowTemplate | null = null;
   private renderedNodes: Node[] = [];
+  private listView: Node | null = null;
+  private listContent: Node | null = null;
+  private listContentHeight = LIST_VIEW_HEIGHT;
   private originalTotalFillWidth = 0;
 
   start() {
     this.prepareSceneTemplates();
+    this.prepareListView();
     this.bindTabs();
     this.bindBackButton();
 
@@ -199,12 +215,46 @@ export class AchievementSceneView extends Component {
     }
   }
 
+  private prepareListView() {
+    if (this.listView && this.listContent) {
+      return;
+    }
+
+    const view = new Node("成就列表视窗");
+    view.parent = this.node;
+    view.layer = this.node.layer;
+    view.setPosition(new Vec3(0, LIST_VIEW_CENTER_Y, 0));
+    const viewTransform = view.addComponent(UITransform);
+    viewTransform.setContentSize(LIST_VIEW_WIDTH, LIST_VIEW_HEIGHT);
+
+    const mask = view.addComponent(Mask);
+    mask.type = Mask.Type.GRAPHICS_RECT;
+
+    const scrollView = view.addComponent(ScrollView);
+    scrollView.horizontal = false;
+    scrollView.vertical = true;
+    scrollView.inertia = true;
+    scrollView.elastic = true;
+
+    const content = new Node("成就列表内容");
+    content.parent = view;
+    content.layer = this.node.layer;
+    const contentTransform = content.addComponent(UITransform);
+    contentTransform.setContentSize(LIST_VIEW_WIDTH, LIST_VIEW_HEIGHT);
+    content.setPosition(new Vec3(0, 0, 0));
+
+    scrollView.content = content;
+    this.listView = view;
+    this.listContent = content;
+  }
+
   private createGroupTemplate(name: string): RowTemplate | null {
     const row = this.findNode(name);
     if (!row) {
       return null;
     }
 
+    const visualRow = this.findNode(PART_PREFIX.row, row) ?? row;
     const nodes: Partial<Record<RowPart, Node>> = {
       row,
     };
@@ -221,7 +271,9 @@ export class AchievementSceneView extends Component {
     }
 
     return {
-      baseY: row.position.y,
+      baseY: visualRow.position.y,
+      visualCenterX: visualRow === row ? 0 : visualRow.position.x,
+      visualCenterY: visualRow === row ? 0 : visualRow.position.y,
       mode: "group",
       nodes,
     };
@@ -243,6 +295,8 @@ export class AchievementSceneView extends Component {
 
     return {
       baseY: row.position.y,
+      visualCenterX: 0,
+      visualCenterY: 0,
       mode: "flat",
       nodes,
     };
@@ -288,7 +342,22 @@ export class AchievementSceneView extends Component {
       (item) => this.activeCategory === "all" || item.category === this.activeCategory,
     );
 
+    this.updateListContentSize(items.length);
     items.forEach((item, index) => this.renderRow(item, index));
+  }
+
+  private updateListContentSize(itemCount: number) {
+    if (!this.listContent) {
+      return;
+    }
+
+    const contentHeight = Math.max(
+      LIST_VIEW_HEIGHT,
+      LIST_TOP_PADDING + itemCount * ROW_HEIGHT + Math.max(0, itemCount - 1) * (ROW_GAP - ROW_HEIGHT) + LIST_BOTTOM_PADDING,
+    );
+    this.listContentHeight = contentHeight;
+    this.listContent.getComponent(UITransform)?.setContentSize(LIST_VIEW_WIDTH, contentHeight);
+    this.listContent.setPosition(new Vec3(0, (LIST_VIEW_HEIGHT - contentHeight) * 0.5, 0));
   }
 
   private renderRow(item: AchievementItem, index: number) {
@@ -298,9 +367,9 @@ export class AchievementSceneView extends Component {
       return;
     }
 
-    const targetY = ROW_TOP_Y - index * ROW_GAP;
-    const deltaY = targetY - template.baseY;
+    const targetY = this.listContentHeight * 0.5 - LIST_TOP_PADDING - ROW_HEIGHT * 0.5 - index * ROW_GAP;
     const rowNodes: Partial<Record<RowPart, Node>> = {};
+    const rowParent = this.listContent ?? this.node;
 
     if (template.mode === "group") {
       const source = template.nodes.row;
@@ -310,9 +379,9 @@ export class AchievementSceneView extends Component {
 
       const row = instantiate(source);
       row.name = `成就条-${item.id}`;
-      row.parent = this.node;
+      row.parent = rowParent;
       row.active = true;
-      row.setPosition(new Vec3(source.position.x, targetY, source.position.z));
+      row.setPosition(new Vec3(-template.visualCenterX, targetY - template.visualCenterY, source.position.z));
       rowNodes.row = row;
       this.renderedNodes.push(row);
 
@@ -335,9 +404,9 @@ export class AchievementSceneView extends Component {
 
         const node = instantiate(source);
         node.name = `${PART_PREFIX[part]}-${item.id}`;
-        node.parent = this.node;
+        node.parent = rowParent;
         node.active = true;
-        node.setPosition(new Vec3(source.position.x, source.position.y + deltaY, source.position.z));
+        node.setPosition(new Vec3(source.position.x, targetY + source.position.y - template.baseY, source.position.z));
         rowNodes[part] = node;
         this.renderedNodes.push(node);
       }
@@ -598,7 +667,7 @@ export class AchievementSceneView extends Component {
       target,
       progressText: item.progressText ?? `${current}/${target}`,
       unlocked,
-      showProgress: item.showProgress ?? !unlocked,
+      showProgress: item.showProgress ?? (item.id ?? item.achievementId) !== "tutorial",
     };
   }
 

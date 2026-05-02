@@ -23,7 +23,7 @@
     "_active": true,
     "_components": [],
     "_prefab": {
-      "__id__": 245
+      "__id__": 247
     },
     "_lpos": {
       "__type__": "cc.Vec3",
@@ -54,7 +54,7 @@
     },
     "autoReleaseAssets": false,
     "_globals": {
-      "__id__": 246
+      "__id__": 248
     },
     "_id": "36a1a355-5b25-4b56-a305-c570f4f8afd2"
   },
@@ -269,55 +269,28 @@
         "__id__": 200
       },
       {
-        "__id__": 203
+        "__id__": 232
       },
       {
-        "__id__": 206
+        "__id__": 237
       },
       {
-        "__id__": 209
-      },
-      {
-        "__id__": 212
-      },
-      {
-        "__id__": 215
-      },
-      {
-        "__id__": 218
-      },
-      {
-        "__id__": 221
-      },
-      {
-        "__id__": 224
-      },
-      {
-        "__id__": 227
-      },
-      {
-        "__id__": 230
-      },
-      {
-        "__id__": 235
-      },
-      {
-        "__id__": 238
+        "__id__": 240
       }
     ],
     "_active": true,
     "_components": [
       {
-        "__id__": 241
-      },
-      {
-        "__id__": 242
-      },
-      {
         "__id__": 243
       },
       {
         "__id__": 244
+      },
+      {
+        "__id__": 245
+      },
+      {
+        "__id__": 246
       }
     ],
     "_prefab": null,
@@ -1030,7 +1003,7 @@
     "_prefab": null,
     "_lpos": {
       "__type__": "cc.Vec3",
-      "x": -178,
+      "x": -164.949,
       "y": 360,
       "z": 0
     },
@@ -1099,7 +1072,7 @@
       "b": 140,
       "a": 255
     },
-    "_string": "23",
+    "_string": "2",
     "_horizontalAlign": 0,
     "_verticalAlign": 1,
     "_actualFontSize": 42,
@@ -1162,7 +1135,7 @@
     "_prefab": null,
     "_lpos": {
       "__type__": "cc.Vec3",
-      "x": -123.271,
+      "x": -130.827,
       "y": 360,
       "z": 0
     },
@@ -1231,7 +1204,7 @@
       "b": 158,
       "a": 255
     },
-    "_string": "/48",
+    "_string": "/8",
     "_horizontalAlign": 0,
     "_verticalAlign": 1,
     "_actualFontSize": 34,
@@ -8195,27 +8168,55 @@
   },
   {
     "__type__": "cc.Node",
-    "_name": "成就条-无情大脑",
+    "_name": "成就条模板",
     "_objFlags": 0,
     "__editorExtras__": {},
     "_parent": {
       "__id__": 2
     },
-    "_children": [],
-    "_active": true,
-    "_components": [
+    "_children": [
       {
         "__id__": 201
       },
       {
-        "__id__": 202
+        "__id__": 204
+      },
+      {
+        "__id__": 207
+      },
+      {
+        "__id__": 210
+      },
+      {
+        "__id__": 213
+      },
+      {
+        "__id__": 216
+      },
+      {
+        "__id__": 219
+      },
+      {
+        "__id__": 222
+      },
+      {
+        "__id__": 225
+      },
+      {
+        "__id__": 228
+      }
+    ],
+    "_active": true,
+    "_components": [
+      {
+        "__id__": 231
       }
     ],
     "_prefab": null,
     "_lpos": {
       "__type__": "cc.Vec3",
-      "x": 0,
-      "y": -466,
+      "x": 32,
+      "y": -595,
       "z": 0
     },
     "_lrot": {
@@ -8239,7 +8240,55 @@
       "y": 0,
       "z": 0
     },
-    "_id": "nodesMvQxHEo43Ua"
+    "_id": "bfSQwumW9DxqH1OOGaDfr9"
+  },
+  {
+    "__type__": "cc.Node",
+    "_name": "成就条",
+    "_objFlags": 0,
+    "__editorExtras__": {},
+    "_parent": {
+      "__id__": 200
+    },
+    "_children": [],
+    "_active": true,
+    "_components": [
+      {
+        "__id__": 202
+      },
+      {
+        "__id__": 203
+      }
+    ],
+    "_prefab": null,
+    "_lpos": {
+      "__type__": "cc.Vec3",
+      "x": -32,
+      "y": 129,
+      "z": 0
+    },
+    "_lrot": {
+      "__type__": "cc.Quat",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1
+    },
+    "_lscale": {
+      "__type__": "cc.Vec3",
+      "x": 1,
+      "y": 1,
+      "z": 1
+    },
+    "_mobility": 0,
+    "_layer": 33554432,
+    "_euler": {
+      "__type__": "cc.Vec3",
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "_id": "e7CCI+UuBBqLq1lN6zKl3Z"
   },
   {
     "__type__": "cc.UITransform",
@@ -8247,7 +8296,7 @@
     "_objFlags": 0,
     "__editorExtras__": {},
     "node": {
-      "__id__": 200
+      "__id__": 201
     },
     "_enabled": true,
     "__prefab": null,
@@ -8261,7 +8310,7 @@
       "x": 0.5,
       "y": 0.5
     },
-    "_id": "uiuX5gYWLRtu3J"
+    "_id": "2f4liSbkZFWZam9rf2IiK0"
   },
   {
     "__type__": "cc.Sprite",
@@ -8269,7 +8318,7 @@
     "_objFlags": 0,
     "__editorExtras__": {},
     "node": {
-      "__id__": 200
+      "__id__": 201
     },
     "_enabled": true,
     "__prefab": null,
@@ -8300,31 +8349,31 @@
     "_isTrimmedMode": true,
     "_useGrayscale": false,
     "_atlas": null,
-    "_id": "spuvMz5sDcMMSQ"
+    "_id": "18NrlrxQtHvq6xdBH1rV+P"
   },
   {
     "__type__": "cc.Node",
-    "_name": "图标-无情大脑",
+    "_name": "图标",
     "_objFlags": 0,
     "__editorExtras__": {},
     "_parent": {
-      "__id__": 2
+      "__id__": 200
     },
     "_children": [],
     "_active": true,
     "_components": [
       {
-        "__id__": 204
+        "__id__": 205
       },
       {
-        "__id__": 205
+        "__id__": 206
       }
     ],
     "_prefab": null,
     "_lpos": {
       "__type__": "cc.Vec3",
-      "x": -278,
-      "y": -466,
+      "x": -310,
+      "y": 129,
       "z": 0
     },
     "_lrot": {
@@ -8348,7 +8397,7 @@
       "y": 0,
       "z": 0
     },
-    "_id": "nodeDKUdOuwAxfdE"
+    "_id": "7d7i8q1TJEEYGc/UpKoeJr"
   },
   {
     "__type__": "cc.UITransform",
@@ -8356,7 +8405,7 @@
     "_objFlags": 0,
     "__editorExtras__": {},
     "node": {
-      "__id__": 203
+      "__id__": 204
     },
     "_enabled": true,
     "__prefab": null,
@@ -8370,7 +8419,7 @@
       "x": 0.5,
       "y": 0.5
     },
-    "_id": "uiC8zTAvkqofDH"
+    "_id": "1cqW9bhYhB3qCZWJMpRHOn"
   },
   {
     "__type__": "cc.Sprite",
@@ -8378,7 +8427,7 @@
     "_objFlags": 0,
     "__editorExtras__": {},
     "node": {
-      "__id__": 203
+      "__id__": 204
     },
     "_enabled": true,
     "__prefab": null,
@@ -8409,31 +8458,31 @@
     "_isTrimmedMode": true,
     "_useGrayscale": false,
     "_atlas": null,
-    "_id": "spH0gCkaB0kiw4"
+    "_id": "ceCgEmUG9G7aWEodqQ6icJ"
   },
   {
     "__type__": "cc.Node",
-    "_name": "标题-无情大脑",
+    "_name": "标题",
     "_objFlags": 0,
     "__editorExtras__": {},
     "_parent": {
-      "__id__": 2
+      "__id__": 200
     },
     "_children": [],
     "_active": true,
     "_components": [
       {
-        "__id__": 207
+        "__id__": 208
       },
       {
-        "__id__": 208
+        "__id__": 209
       }
     ],
     "_prefab": null,
     "_lpos": {
       "__type__": "cc.Vec3",
-      "x": -85,
-      "y": -442,
+      "x": -117,
+      "y": 153,
       "z": 0
     },
     "_lrot": {
@@ -8457,7 +8506,7 @@
       "y": 0,
       "z": 0
     },
-    "_id": "nodeP9IvBlT26Gvo"
+    "_id": "26SBF3bANMFJObkUaeuKVy"
   },
   {
     "__type__": "cc.UITransform",
@@ -8465,7 +8514,7 @@
     "_objFlags": 0,
     "__editorExtras__": {},
     "node": {
-      "__id__": 206
+      "__id__": 207
     },
     "_enabled": true,
     "__prefab": null,
@@ -8479,7 +8528,7 @@
       "x": 0.5,
       "y": 0.5
     },
-    "_id": "uiNnJESYNFPZrE"
+    "_id": "070olg1/5OZY2fS+56aRRu"
   },
   {
     "__type__": "cc.Label",
@@ -8487,7 +8536,7 @@
     "_objFlags": 0,
     "__editorExtras__": {},
     "node": {
-      "__id__": 206
+      "__id__": 207
     },
     "_enabled": true,
     "__prefab": null,
@@ -8541,31 +8590,31 @@
       "y": 2
     },
     "_shadowBlur": 2,
-    "_id": "lbEWfUr1d6VfFU"
+    "_id": "30GUaKbChHF5ItUQi2qdiE"
   },
   {
     "__type__": "cc.Node",
-    "_name": "描述-无情大脑",
+    "_name": "描述",
     "_objFlags": 0,
     "__editorExtras__": {},
     "_parent": {
-      "__id__": 2
+      "__id__": 200
     },
     "_children": [],
     "_active": true,
     "_components": [
       {
-        "__id__": 210
+        "__id__": 211
       },
       {
-        "__id__": 211
+        "__id__": 212
       }
     ],
     "_prefab": null,
     "_lpos": {
       "__type__": "cc.Vec3",
-      "x": -50,
-      "y": -476,
+      "x": -82,
+      "y": 119,
       "z": 0
     },
     "_lrot": {
@@ -8589,7 +8638,7 @@
       "y": 0,
       "z": 0
     },
-    "_id": "node8RJFEESeyNGH"
+    "_id": "86EqdoUzJC4qYYbI4MTbVR"
   },
   {
     "__type__": "cc.UITransform",
@@ -8597,7 +8646,7 @@
     "_objFlags": 0,
     "__editorExtras__": {},
     "node": {
-      "__id__": 209
+      "__id__": 210
     },
     "_enabled": true,
     "__prefab": null,
@@ -8611,7 +8660,7 @@
       "x": 0.5,
       "y": 0.5
     },
-    "_id": "ui99lgKJCfPIma"
+    "_id": "b3sQm+qARHSod8/nRMVQlB"
   },
   {
     "__type__": "cc.Label",
@@ -8619,7 +8668,7 @@
     "_objFlags": 0,
     "__editorExtras__": {},
     "node": {
-      "__id__": 209
+      "__id__": 210
     },
     "_enabled": true,
     "__prefab": null,
@@ -8673,31 +8722,31 @@
       "y": 2
     },
     "_shadowBlur": 2,
-    "_id": "lbi7mo5DAayKYl"
+    "_id": "212UwsJ9dJiafTkPWB4ZDS"
   },
   {
     "__type__": "cc.Node",
-    "_name": "进度槽-无情大脑",
+    "_name": "进度槽",
     "_objFlags": 0,
     "__editorExtras__": {},
     "_parent": {
-      "__id__": 2
+      "__id__": 200
     },
     "_children": [],
     "_active": true,
     "_components": [
       {
-        "__id__": 213
+        "__id__": 214
       },
       {
-        "__id__": 214
+        "__id__": 215
       }
     ],
     "_prefab": null,
     "_lpos": {
       "__type__": "cc.Vec3",
-      "x": -58.3805,
-      "y": -501,
+      "x": -90.38049999999998,
+      "y": 94,
       "z": 0
     },
     "_lrot": {
@@ -8721,7 +8770,7 @@
       "y": 0,
       "z": 0
     },
-    "_id": "nodePqngVIBF3thC"
+    "_id": "b3sah5F2JBr7cai/C7Th/R"
   },
   {
     "__type__": "cc.UITransform",
@@ -8729,7 +8778,7 @@
     "_objFlags": 0,
     "__editorExtras__": {},
     "node": {
-      "__id__": 212
+      "__id__": 213
     },
     "_enabled": true,
     "__prefab": null,
@@ -8743,7 +8792,7 @@
       "x": 0.5,
       "y": 0.5
     },
-    "_id": "ui8pq9qhh8WluE"
+    "_id": "fePMgwW4FAbKCEdXTgKZzw"
   },
   {
     "__type__": "cc.Sprite",
@@ -8751,7 +8800,7 @@
     "_objFlags": 0,
     "__editorExtras__": {},
     "node": {
-      "__id__": 212
+      "__id__": 213
     },
     "_enabled": true,
     "__prefab": null,
@@ -8782,31 +8831,31 @@
     "_isTrimmedMode": true,
     "_useGrayscale": false,
     "_atlas": null,
-    "_id": "spm1BjcWOE1qEi"
+    "_id": "b9baiob8tGkqWgZs0kaIHj"
   },
   {
     "__type__": "cc.Node",
-    "_name": "进度填充-无情大脑",
+    "_name": "进度填充",
     "_objFlags": 0,
     "__editorExtras__": {},
     "_parent": {
-      "__id__": 2
+      "__id__": 200
     },
     "_children": [],
     "_active": true,
     "_components": [
       {
-        "__id__": 216
+        "__id__": 217
       },
       {
-        "__id__": 217
+        "__id__": 218
       }
     ],
     "_prefab": null,
     "_lpos": {
       "__type__": "cc.Vec3",
-      "x": -208.811,
-      "y": -501,
+      "x": -240.811,
+      "y": 94,
       "z": 0
     },
     "_lrot": {
@@ -8830,7 +8879,7 @@
       "y": 0,
       "z": 0
     },
-    "_id": "nodek8vE9akrBrkS"
+    "_id": "40BhT0xVBAMr4CAU7MAzuI"
   },
   {
     "__type__": "cc.UITransform",
@@ -8838,7 +8887,7 @@
     "_objFlags": 0,
     "__editorExtras__": {},
     "node": {
-      "__id__": 215
+      "__id__": 216
     },
     "_enabled": true,
     "__prefab": null,
@@ -8852,7 +8901,7 @@
       "x": 0.5,
       "y": 0.5
     },
-    "_id": "ui2X5g0wasZcF6"
+    "_id": "44tE8faZFJnawG+bne2Ze2"
   },
   {
     "__type__": "cc.Sprite",
@@ -8860,7 +8909,7 @@
     "_objFlags": 0,
     "__editorExtras__": {},
     "node": {
-      "__id__": 215
+      "__id__": 216
     },
     "_enabled": true,
     "__prefab": null,
@@ -8891,31 +8940,31 @@
     "_isTrimmedMode": true,
     "_useGrayscale": false,
     "_atlas": null,
-    "_id": "spKDKynCezqcU4"
+    "_id": "b0YCJAwidCiJy3SbbeoI7r"
   },
   {
     "__type__": "cc.Node",
-    "_name": "进度文本-无情大脑",
+    "_name": "进度文本",
     "_objFlags": 0,
     "__editorExtras__": {},
     "_parent": {
-      "__id__": 2
+      "__id__": 200
     },
     "_children": [],
     "_active": true,
     "_components": [
       {
-        "__id__": 219
+        "__id__": 220
       },
       {
-        "__id__": 220
+        "__id__": 221
       }
     ],
     "_prefab": null,
     "_lpos": {
       "__type__": "cc.Vec3",
-      "x": 154.355,
-      "y": -501,
+      "x": 122.35500000000002,
+      "y": 94,
       "z": 0
     },
     "_lrot": {
@@ -8939,7 +8988,7 @@
       "y": 0,
       "z": 0
     },
-    "_id": "nodeP9HMryHSADzF"
+    "_id": "b716c/Gi5K0YAJsPpsmLqD"
   },
   {
     "__type__": "cc.UITransform",
@@ -8947,7 +8996,7 @@
     "_objFlags": 0,
     "__editorExtras__": {},
     "node": {
-      "__id__": 218
+      "__id__": 219
     },
     "_enabled": true,
     "__prefab": null,
@@ -8961,7 +9010,7 @@
       "x": 0.5,
       "y": 0.5
     },
-    "_id": "uigV3J4GF7EI6a"
+    "_id": "b5QIZSB5FNZJIJKVX2L1xR"
   },
   {
     "__type__": "cc.Label",
@@ -8969,7 +9018,7 @@
     "_objFlags": 0,
     "__editorExtras__": {},
     "node": {
-      "__id__": 218
+      "__id__": 219
     },
     "_enabled": true,
     "__prefab": null,
@@ -9023,31 +9072,31 @@
       "y": 2
     },
     "_shadowBlur": 2,
-    "_id": "lbs24Unj8Ldc9o"
+    "_id": "3fhVF79M5EG5/a6mbSB5zO"
   },
   {
     "__type__": "cc.Node",
-    "_name": "奖励-无情大脑",
+    "_name": "奖励",
     "_objFlags": 0,
     "__editorExtras__": {},
     "_parent": {
-      "__id__": 2
+      "__id__": 200
     },
     "_children": [],
     "_active": true,
     "_components": [
       {
-        "__id__": 222
+        "__id__": 223
       },
       {
-        "__id__": 223
+        "__id__": 224
       }
     ],
     "_prefab": null,
     "_lpos": {
       "__type__": "cc.Vec3",
-      "x": 157.518,
-      "y": -462,
+      "x": 125.51800000000003,
+      "y": 133,
       "z": 0
     },
     "_lrot": {
@@ -9071,7 +9120,7 @@
       "y": 0,
       "z": 0
     },
-    "_id": "nodeRaaIu4VLkaAm"
+    "_id": "e3aKJkO0VH3JBGsBQ4LB4I"
   },
   {
     "__type__": "cc.UITransform",
@@ -9079,7 +9128,7 @@
     "_objFlags": 0,
     "__editorExtras__": {},
     "node": {
-      "__id__": 221
+      "__id__": 222
     },
     "_enabled": true,
     "__prefab": null,
@@ -9093,7 +9142,7 @@
       "x": 0.5,
       "y": 0.5
     },
-    "_id": "uirplj3o3viXR5"
+    "_id": "b7/spOjHRFcakAIMSrbZ7T"
   },
   {
     "__type__": "cc.Sprite",
@@ -9101,7 +9150,7 @@
     "_objFlags": 0,
     "__editorExtras__": {},
     "node": {
-      "__id__": 221
+      "__id__": 222
     },
     "_enabled": true,
     "__prefab": null,
@@ -9132,31 +9181,31 @@
     "_isTrimmedMode": true,
     "_useGrayscale": false,
     "_atlas": null,
-    "_id": "spBR4m3fSJNoIY"
+    "_id": "9dxA4BBFJKfpB/C3E9XPVF"
   },
   {
     "__type__": "cc.Node",
-    "_name": "奖励数量-无情大脑",
+    "_name": "奖励数量",
     "_objFlags": 0,
     "__editorExtras__": {},
     "_parent": {
-      "__id__": 2
+      "__id__": 200
     },
     "_children": [],
     "_active": true,
     "_components": [
       {
-        "__id__": 225
+        "__id__": 226
       },
       {
-        "__id__": 226
+        "__id__": 227
       }
     ],
     "_prefab": null,
     "_lpos": {
       "__type__": "cc.Vec3",
-      "x": 233.797,
-      "y": -462,
+      "x": 201.79700000000003,
+      "y": 133,
       "z": 0
     },
     "_lrot": {
@@ -9180,7 +9229,7 @@
       "y": 0,
       "z": 0
     },
-    "_id": "nodekR8OJ4j7TbYI"
+    "_id": "52nbiNiktK3LJ10TNtw7Ej"
   },
   {
     "__type__": "cc.UITransform",
@@ -9188,7 +9237,7 @@
     "_objFlags": 0,
     "__editorExtras__": {},
     "node": {
-      "__id__": 224
+      "__id__": 225
     },
     "_enabled": true,
     "__prefab": null,
@@ -9202,7 +9251,7 @@
       "x": 0.5,
       "y": 0.5
     },
-    "_id": "uiNznl5Ww8W9vr"
+    "_id": "c3Z34uOa1P9aDsAbPSVgwA"
   },
   {
     "__type__": "cc.Label",
@@ -9210,7 +9259,7 @@
     "_objFlags": 0,
     "__editorExtras__": {},
     "node": {
-      "__id__": 224
+      "__id__": 225
     },
     "_enabled": true,
     "__prefab": null,
@@ -9264,31 +9313,31 @@
       "y": 2
     },
     "_shadowBlur": 2,
-    "_id": "lb97C8kwoRnSkO"
+    "_id": "88EgQmkDNCv7QMnDkC3Yza"
   },
   {
     "__type__": "cc.Node",
-    "_name": "状态-无情大脑",
+    "_name": "状态",
     "_objFlags": 0,
     "__editorExtras__": {},
     "_parent": {
-      "__id__": 2
+      "__id__": 200
     },
     "_children": [],
     "_active": true,
     "_components": [
       {
-        "__id__": 228
+        "__id__": 229
       },
       {
-        "__id__": 229
+        "__id__": 230
       }
     ],
     "_prefab": null,
     "_lpos": {
       "__type__": "cc.Vec3",
-      "x": 291.721,
-      "y": -462,
+      "x": 259.721,
+      "y": 133,
       "z": 0
     },
     "_lrot": {
@@ -9312,7 +9361,7 @@
       "y": 0,
       "z": 0
     },
-    "_id": "node4kLhU1bawKcM"
+    "_id": "6cs/BmPLdOOpsPBob6VzWV"
   },
   {
     "__type__": "cc.UITransform",
@@ -9320,7 +9369,7 @@
     "_objFlags": 0,
     "__editorExtras__": {},
     "node": {
-      "__id__": 227
+      "__id__": 228
     },
     "_enabled": true,
     "__prefab": null,
@@ -9334,7 +9383,7 @@
       "x": 0.5,
       "y": 0.5
     },
-    "_id": "ui06GUnWWHIxyC"
+    "_id": "b0REpjIuFMy7JY308SxyCG"
   },
   {
     "__type__": "cc.Sprite",
@@ -9342,7 +9391,7 @@
     "_objFlags": 0,
     "__editorExtras__": {},
     "node": {
-      "__id__": 227
+      "__id__": 228
     },
     "_enabled": true,
     "__prefab": null,
@@ -9373,7 +9422,29 @@
     "_isTrimmedMode": true,
     "_useGrayscale": false,
     "_atlas": null,
-    "_id": "spcmW8ouqR75Ub"
+    "_id": "f5deCFrgxFIIAN3dOB6T6Y"
+  },
+  {
+    "__type__": "cc.UITransform",
+    "_name": "",
+    "_objFlags": 0,
+    "__editorExtras__": {},
+    "node": {
+      "__id__": 200
+    },
+    "_enabled": true,
+    "__prefab": null,
+    "_contentSize": {
+      "__type__": "cc.Size",
+      "width": 100,
+      "height": 100
+    },
+    "_anchorPoint": {
+      "__type__": "cc.Vec2",
+      "x": 0.5,
+      "y": 0.5
+    },
+    "_id": "23oVZJaBBD/4xNdISPc4iT"
   },
   {
     "__type__": "cc.Node",
@@ -9387,16 +9458,16 @@
     "_active": true,
     "_components": [
       {
-        "__id__": 231
-      },
-      {
-        "__id__": 232
-      },
-      {
         "__id__": 233
       },
       {
         "__id__": 234
+      },
+      {
+        "__id__": 235
+      },
+      {
+        "__id__": 236
       }
     ],
     "_prefab": null,
@@ -9435,7 +9506,7 @@
     "_objFlags": 0,
     "__editorExtras__": {},
     "node": {
-      "__id__": 230
+      "__id__": 232
     },
     "_enabled": true,
     "__prefab": null,
@@ -9457,7 +9528,7 @@
     "_objFlags": 0,
     "__editorExtras__": {},
     "node": {
-      "__id__": 230
+      "__id__": 232
     },
     "_enabled": true,
     "__prefab": null,
@@ -9496,7 +9567,7 @@
     "_objFlags": 0,
     "__editorExtras__": {},
     "node": {
-      "__id__": 230
+      "__id__": 232
     },
     "_enabled": true,
     "__prefab": null,
@@ -9538,7 +9609,7 @@
     "_duration": 0.1,
     "_zoomScale": 0.92,
     "_target": {
-      "__id__": 230
+      "__id__": 232
     },
     "_id": "bt2ICsvnMsG6f7"
   },
@@ -9548,7 +9619,7 @@
     "_objFlags": 0,
     "__editorExtras__": {},
     "node": {
-      "__id__": 230
+      "__id__": 232
     },
     "_enabled": true,
     "__prefab": null,
@@ -9568,10 +9639,10 @@
     "_active": true,
     "_components": [
       {
-        "__id__": 236
+        "__id__": 238
       },
       {
-        "__id__": 237
+        "__id__": 239
       }
     ],
     "_prefab": null,
@@ -9610,7 +9681,7 @@
     "_objFlags": 0,
     "__editorExtras__": {},
     "node": {
-      "__id__": 235
+      "__id__": 237
     },
     "_enabled": true,
     "__prefab": null,
@@ -9632,7 +9703,7 @@
     "_objFlags": 0,
     "__editorExtras__": {},
     "node": {
-      "__id__": 235
+      "__id__": 237
     },
     "_enabled": true,
     "__prefab": null,
@@ -9677,10 +9748,10 @@
     "_active": true,
     "_components": [
       {
-        "__id__": 239
+        "__id__": 241
       },
       {
-        "__id__": 240
+        "__id__": 242
       }
     ],
     "_prefab": null,
@@ -9719,7 +9790,7 @@
     "_objFlags": 0,
     "__editorExtras__": {},
     "node": {
-      "__id__": 238
+      "__id__": 240
     },
     "_enabled": true,
     "__prefab": null,
@@ -9741,7 +9812,7 @@
     "_objFlags": 0,
     "__editorExtras__": {},
     "node": {
-      "__id__": 238
+      "__id__": 240
     },
     "_enabled": true,
     "__prefab": null,
@@ -9880,7 +9951,9 @@
     "achievementListApiPath": "/api/achievements",
     "gameKey": "reverse_brain",
     "gameMode": "classic",
-    "useDefaultWhenRequestFailed": true,
+    "useDefaultWhenRequestFailed": false,
+    "useLocalCache": true,
+    "cacheTtlSeconds": 300,
     "_id": "7dW7HM3lVONZ5SIJXc+t7M"
   },
   {
@@ -9894,28 +9967,28 @@
   {
     "__type__": "cc.SceneGlobals",
     "ambient": {
-      "__id__": 247
-    },
-    "shadows": {
-      "__id__": 248
-    },
-    "_skybox": {
       "__id__": 249
     },
-    "fog": {
+    "shadows": {
       "__id__": 250
     },
-    "octree": {
+    "_skybox": {
       "__id__": 251
     },
-    "skin": {
+    "fog": {
       "__id__": 252
     },
-    "lightProbeInfo": {
+    "octree": {
       "__id__": 253
     },
-    "postSettings": {
+    "skin": {
       "__id__": 254
+    },
+    "lightProbeInfo": {
+      "__id__": 255
+    },
+    "postSettings": {
+      "__id__": 256
     },
     "bakedWithStationaryMainLight": false,
     "bakedWithHighpLightmap": false

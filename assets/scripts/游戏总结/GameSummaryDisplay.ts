@@ -188,6 +188,7 @@ export class GameSummaryDisplay extends Component {
 
   private createSubmitScorePayload(userId: string, result: GameResultData) {
     return {
+      clientRoundKey: this.createClientRoundKey(userId, result),
       userId,
       gameKey: this.gameKey,
       gameMode: this.gameMode,
@@ -213,6 +214,13 @@ export class GameSummaryDisplay extends Component {
         frontendHistoryBestScore: Math.max(0, Math.floor(result.historyBestScore)),
       },
     };
+  }
+
+  private createClientRoundKey(userId: string, result: GameResultData) {
+    const startedAt = result.startedAt || "unknown-start";
+    const endedAt = result.endedAt || "unknown-end";
+    const score = Math.max(0, Math.floor(result.score));
+    return `${userId}:${this.gameKey}:${this.gameMode}:${startedAt}:${endedAt}:${score}`;
   }
 
   private createSubmitScoreUrl() {
