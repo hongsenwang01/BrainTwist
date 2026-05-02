@@ -4,6 +4,8 @@ import { ScoreCountUpLabel } from "./ScoreCountUpLabel";
 
 const { ccclass, property } = _decorator;
 
+const ACHIEVEMENT_CACHE_DIRTY_KEY = "brain_twist_achievement_cache_dirty";
+
 type SubmitScoreResponse = {
   code: number;
   message?: string;
@@ -169,6 +171,8 @@ export class GameSummaryDisplay extends Component {
         );
         return;
       }
+
+      sys.localStorage.setItem(ACHIEVEMENT_CACHE_DIRTY_KEY, "1");
 
       if (typeof uploadResult.data.bestScore === "number") {
         this.setScoreLabel(
