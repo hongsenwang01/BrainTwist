@@ -417,7 +417,7 @@
       "__expectedType__": "cc.SpriteFrame"
     },
     "particleParent": null,
-    "playOnStart": true,
+    "playOnStart": false,
     "spawnPerSecond": 8,
     "maxParticles": 90,
     "spawnWidth": 700,
@@ -432,6 +432,11 @@
     "minOpacity": 120,
     "maxOpacity": 245,
     "burstCount": 22,
+    "directionalSpawnPadding": 48,
+    "directionalMinDistance": 560,
+    "directionalMaxDistance": 940,
+    "directionalSpread": 520,
+    "directionalDrift": 130,
     "colorA": {
       "__type__": "cc.Color",
       "r": 255,
@@ -719,6 +724,13 @@
     "targetLabel": null,
     "maxScore": 5000,
     "randomizeOnStart": true,
+    "fetchBestScoreOnStart": false,
+    "backendBaseUrl": "http://localhost:3000",
+    "bestScoreApiPath": "/api/game-scores/best",
+    "gameKey": "reverse_brain",
+    "gameMode": "classic",
+    "useBestScoreCache": true,
+    "bestScoreCacheTtlSeconds": 60,
     "_id": "0ebhQPfzZFnYSGJplxotgM"
   },
   {

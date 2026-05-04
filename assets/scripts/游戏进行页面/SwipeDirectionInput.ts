@@ -106,7 +106,7 @@ export class SwipeDirectionInput extends Component {
       return;
     }
 
-    controller.handleDirectionClick(direction);
+    controller.handleSwipeDirection(direction);
   }
 
   private findGameController() {

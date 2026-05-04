@@ -7,6 +7,22 @@ const { ccclass, property } = _decorator;
 const ACHIEVEMENT_CACHE_DIRTY_KEY = "brain_twist_achievement_cache_dirty";
 const BEST_SCORE_CACHE_KEY = "brain_twist_best_score_cache_v1";
 
+type BestScoreCache = {
+  userId: string;
+  gameKey: string;
+  gameMode: string;
+  savedAt: number;
+  bestScore: number;
+};
+
+type BestScoreResponse = {
+  code: number;
+  message?: string;
+  data?: {
+    bestScore?: number;
+  };
+};
+
 type SubmitScoreResponse = {
   code: number;
   message?: string;
@@ -58,6 +74,9 @@ export class GameSummaryDisplay extends Component {
   @property({ displayName: "提交成绩接口路径" })
   public submitScoreApiPath = "/api/game-scores/submit";
 
+  @property({ displayName: "最高分接口路径" })
+  public bestScoreApiPath = "/api/game-scores/best";
+
   @property({ displayName: "游戏标识" })
   public gameKey = "reverse_brain";
 
@@ -77,15 +96,21 @@ export class GameSummaryDisplay extends Component {
     this.render(result);
 
     if (this.autoUploadScore) {
-      void this.uploadScore(result);
+      void this.loadHistoryBestScoreThenUpload(result);
     }
   }
 
   public render(result: GameResultData) {
+    const cachedBestScore = this.getCachedBestScore();
+    const displayBestScore =
+      typeof cachedBestScore === "number"
+        ? Math.max(cachedBestScore, result.historyBestScore)
+        : result.historyBestScore;
+
     this.setScoreLabel(this.scoreLabel, this.formatNumber(result.score), 0);
     this.setScoreLabel(
       this.historyBestScoreLabel,
-      this.formatNumber(result.historyBestScore),
+      this.formatNumber(displayBestScore),
       this.historyScoreExtraDelay,
     );
     this.setLabel(this.correctCountLabel, `${result.correctCount}`);
@@ -177,14 +202,50 @@ export class GameSummaryDisplay extends Component {
 
       if (typeof uploadResult.data.bestScore === "number") {
         this.saveBestScoreCache(userId, uploadResult.data.bestScore);
-        this.setScoreLabel(
-          this.historyBestScoreLabel,
-          this.formatNumber(uploadResult.data.bestScore),
-          this.historyScoreExtraDelay,
-        );
       }
     } catch (error) {
       warn(`GameSummaryDisplay: score upload request failed, ${String(error)}.`);
+    }
+  }
+
+  private async loadHistoryBestScoreThenUpload(result: GameResultData) {
+    const userId = sys.localStorage.getItem("brain_twist_user_id");
+    if (userId) {
+      await this.loadHistoryBestScoreBeforeSubmit(userId);
+    }
+
+    await this.uploadScore(result);
+  }
+
+  private async loadHistoryBestScoreBeforeSubmit(userId: string) {
+    try {
+      const response = await fetch(this.createBestScoreUrl(userId), {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        warn(`GameSummaryDisplay: best score request failed, status ${response.status}.`);
+        return;
+      }
+
+      const result = (await response.json()) as BestScoreResponse;
+      if (result.code !== 0 || !result.data || typeof result.data.bestScore !== "number") {
+        warn(`GameSummaryDisplay: best score request failed, ${result.message ?? "unknown error"}.`);
+        return;
+      }
+
+      const historyBestScore = Math.max(0, Math.floor(result.data.bestScore));
+      this.saveBestScoreCache(userId, historyBestScore);
+      this.setScoreLabel(
+        this.historyBestScoreLabel,
+        this.formatNumber(historyBestScore),
+        this.historyScoreExtraDelay,
+      );
+    } catch (error) {
+      warn(`GameSummaryDisplay: best score request failed, ${String(error)}.`);
     }
   }
 
@@ -238,12 +299,54 @@ export class GameSummaryDisplay extends Component {
     );
   }
 
+  private getCachedBestScore() {
+    const userId = sys.localStorage.getItem("brain_twist_user_id");
+    if (!userId) {
+      return null;
+    }
+
+    try {
+      const rawCache = sys.localStorage.getItem(BEST_SCORE_CACHE_KEY);
+      if (!rawCache) {
+        return null;
+      }
+
+      const cache = JSON.parse(rawCache) as BestScoreCache;
+      if (
+        cache.userId !== userId ||
+        cache.gameKey !== this.gameKey ||
+        cache.gameMode !== this.gameMode ||
+        typeof cache.bestScore !== "number"
+      ) {
+        return null;
+      }
+
+      return Math.max(0, Math.floor(cache.bestScore));
+    } catch (error) {
+      warn(`GameSummaryDisplay: read best score cache failed, ${String(error)}.`);
+      return null;
+    }
+  }
+
   private createSubmitScoreUrl() {
     const baseUrl = this.backendBaseUrl.replace(/\/+$/, "");
     const path = this.submitScoreApiPath.startsWith("/")
       ? this.submitScoreApiPath
       : `/${this.submitScoreApiPath}`;
     return `${baseUrl}${path}`;
+  }
+
+  private createBestScoreUrl(userId: string) {
+    const baseUrl = this.backendBaseUrl.replace(/\/+$/, "");
+    const path = this.bestScoreApiPath.startsWith("/")
+      ? this.bestScoreApiPath
+      : `/${this.bestScoreApiPath}`;
+    const query = [
+      `userId=${encodeURIComponent(userId)}`,
+      `gameKey=${encodeURIComponent(this.gameKey)}`,
+      `gameMode=${encodeURIComponent(this.gameMode)}`,
+    ].join("&");
+    return `${baseUrl}${path}?${query}`;
   }
 
   private createDeviceInfo() {

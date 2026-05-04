@@ -8,6 +8,7 @@ import {
   tween,
   UIOpacity,
   UITransform,
+  Vec2,
   Vec3,
   warn,
 } from "cc";
@@ -66,6 +67,21 @@ export class BottomGlowParticleEmitter extends Component {
 
   @property({ displayName: "爆发粒子数量" })
   public burstCount = 22;
+
+  @property({ displayName: "手势喷发起点外扩" })
+  public directionalSpawnPadding = 48;
+
+  @property({ displayName: "手势喷发最小距离" })
+  public directionalMinDistance = 560;
+
+  @property({ displayName: "手势喷发最大距离" })
+  public directionalMaxDistance = 940;
+
+  @property({ displayName: "手势喷发横向散布" })
+  public directionalSpread = 520;
+
+  @property({ displayName: "手势喷发侧向漂移" })
+  public directionalDrift = 130;
 
   @property({ type: Color, displayName: "颜色A" })
   public colorA = new Color(255, 66, 194, 255);
@@ -134,7 +150,30 @@ export class BottomGlowParticleEmitter extends Component {
     }
   }
 
-  private spawnParticle(isBurst = false) {
+  public playDirectionalBurst(direction: Vec2, multiplier = 1) {
+    if (!this.particleSpriteFrame) {
+      warn("BottomGlowParticleEmitter: particleSpriteFrame is missing.");
+      return;
+    }
+
+    const directionLength = Math.sqrt(
+      direction.x * direction.x + direction.y * direction.y,
+    );
+    if (directionLength <= 0) {
+      return;
+    }
+
+    const normalizedDirection = new Vec2(
+      direction.x / directionLength,
+      direction.y / directionLength,
+    );
+    const count = Math.max(1, Math.round(this.burstCount * Math.max(0.35, multiplier)));
+    for (let i = 0; i < count; i += 1) {
+      this.spawnParticle(true, normalizedDirection);
+    }
+  }
+
+  private spawnParticle(isBurst = false, directionalVelocity: Vec2 | null = null) {
     if (!this.particleSpriteFrame || this.activeParticles.length >= this.maxParticles) {
       return;
     }
@@ -144,21 +183,14 @@ export class BottomGlowParticleEmitter extends Component {
     const opacity = particle.getComponent(UIOpacity)!;
     const transform = particle.getComponent(UITransform)!;
     const size = this.randomRange(this.minSize, this.maxSize) * (isBurst ? 1.2 : 1);
-    const startX = this.randomRange(-this.spawnWidth * 0.5, this.spawnWidth * 0.5);
-    const drift = this.randomRange(-this.horizontalDrift, this.horizontalDrift);
-    const riseDistance =
-      this.randomRange(this.minRiseDistance, this.maxRiseDistance) * (isBurst ? 1.15 : 1);
-    const lifeTime = this.randomRange(this.minLifeTime, this.maxLifeTime) * (isBurst ? 0.82 : 1);
+    const motion = directionalVelocity
+      ? this.createDirectionalMotion(directionalVelocity, isBurst)
+      : this.createBottomMotion(isBurst);
+    const lifeTime = motion.lifeTime;
     const peakOpacity = Math.round(this.randomRange(this.minOpacity, this.maxOpacity));
     const fadeInDuration = Math.min(0.18, lifeTime * 0.22);
     const fadeOutDuration = Math.min(0.55, lifeTime * 0.38);
     const stayDuration = Math.max(0, lifeTime - fadeInDuration - fadeOutDuration);
-    const startPosition = new Vec3(startX, this.bottomY + this.randomRange(-18, 18), 0);
-    const endPosition = new Vec3(
-      startX + drift,
-      startPosition.y + riseDistance,
-      0,
-    );
     const startScale = this.randomRange(0.28, 0.55);
     const endScale = this.randomRange(0.9, 1.35) * (isBurst ? 1.12 : 1);
 
@@ -167,7 +199,7 @@ export class BottomGlowParticleEmitter extends Component {
     sprite.color = this.getRandomColor();
     transform.setContentSize(size, size);
     particle.active = true;
-    particle.setPosition(startPosition);
+    particle.setPosition(motion.startPosition);
     particle.setScale(startScale, startScale, 1);
     opacity.opacity = 0;
     this.activeParticles.push(particle);
@@ -182,13 +214,59 @@ export class BottomGlowParticleEmitter extends Component {
       .to(
         lifeTime,
         {
-          position: endPosition,
+          position: motion.endPosition,
           scale: new Vec3(endScale, endScale, 1),
         },
         { easing: "sineOut" },
       )
       .call(() => this.recycleParticle(particle))
       .start();
+  }
+
+  private createBottomMotion(isBurst: boolean) {
+    const startX = this.randomRange(-this.spawnWidth * 0.5, this.spawnWidth * 0.5);
+    const drift = this.randomRange(-this.horizontalDrift, this.horizontalDrift);
+    const riseDistance =
+      this.randomRange(this.minRiseDistance, this.maxRiseDistance) * (isBurst ? 1.15 : 1);
+    const startPosition = new Vec3(startX, this.bottomY + this.randomRange(-18, 18), 0);
+    const endPosition = new Vec3(startX + drift, startPosition.y + riseDistance, 0);
+    const lifeTime = this.randomRange(this.minLifeTime, this.maxLifeTime) * (isBurst ? 0.82 : 1);
+
+    return { startPosition, endPosition, lifeTime };
+  }
+
+  private createDirectionalMotion(direction: Vec2, isBurst: boolean) {
+    const halfWidth = this.spawnWidth * 0.5;
+    const halfHeight = Math.max(Math.abs(this.bottomY), this.maxRiseDistance);
+    const startPosition = this.getDirectionalStartPosition(direction, halfWidth, halfHeight);
+    const minDistance = Math.min(this.directionalMinDistance, this.directionalMaxDistance);
+    const maxDistance = Math.max(this.directionalMinDistance, this.directionalMaxDistance);
+    const travelDistance =
+      this.randomRange(minDistance, maxDistance) * (isBurst ? 1.08 : 1);
+    const sideDrift = this.randomRange(-this.directionalDrift, this.directionalDrift);
+    const perpendicularX = -direction.y;
+    const perpendicularY = direction.x;
+    const endPosition = new Vec3(
+      startPosition.x + direction.x * travelDistance + perpendicularX * sideDrift,
+      startPosition.y + direction.y * travelDistance + perpendicularY * sideDrift,
+      0,
+    );
+    const lifeTime = this.randomRange(this.minLifeTime * 0.62, this.maxLifeTime * 0.78);
+
+    return { startPosition, endPosition, lifeTime };
+  }
+
+  private getDirectionalStartPosition(direction: Vec2, halfWidth: number, halfHeight: number) {
+    const padding = Math.max(0, this.directionalSpawnPadding);
+    const spread = Math.max(0, this.directionalSpread);
+
+    if (Math.abs(direction.x) >= Math.abs(direction.y)) {
+      const startX = direction.x > 0 ? -halfWidth - padding : halfWidth + padding;
+      return new Vec3(startX, this.randomRange(-spread * 0.5, spread * 0.5), 0);
+    }
+
+    const startY = direction.y > 0 ? this.bottomY - padding : halfHeight + padding;
+    return new Vec3(this.randomRange(-halfWidth, halfWidth), startY, 0);
   }
 
   private getParticle() {

@@ -8,6 +8,7 @@ import {
   Node,
   Tween,
   tween,
+  Vec2,
   Vec3,
   warn,
 } from "cc";
@@ -32,6 +33,8 @@ enum ArrowClickRule {
   Normal = 0,
   Reverse = 1,
 }
+
+type DirectionInputSource = "button" | "swipe";
 
 @ccclass("ArrowGameController")
 export class ArrowGameController extends Component {
@@ -191,6 +194,10 @@ export class ArrowGameController extends Component {
     this.handleDirectionClick(ArrowDirection.Right);
   }
 
+  public handleSwipeDirection(clickedDirection: ArrowDirection) {
+    this.handleDirectionClick(clickedDirection, "swipe");
+  }
+
   public pauseGame() {
     this.isPaused = true;
     this.stopArrowRefreshLoop();
@@ -249,7 +256,10 @@ export class ArrowGameController extends Component {
     director.loadScene(this.homeSceneName);
   }
 
-  public handleDirectionClick(clickedDirection: ArrowDirection) {
+  public handleDirectionClick(
+    clickedDirection: ArrowDirection,
+    inputSource: DirectionInputSource = "button",
+  ) {
     if (this.isPaused || this.isGameEnded || this.questionAnswered) {
       return;
     }
@@ -264,9 +274,14 @@ export class ArrowGameController extends Component {
 
     const currentDirection = this.arrowDisplay.getCurrentDirection();
     const correctDirection = this.getCorrectDirection(currentDirection);
+    const isCorrect = clickedDirection === correctDirection;
 
-    if (clickedDirection === correctDirection) {
-      this.handleCorrectClick();
+    if (inputSource === "swipe") {
+      this.playSwipeParticleBurst(clickedDirection, isCorrect);
+    }
+
+    if (isCorrect) {
+      this.handleCorrectClick(inputSource);
       return;
     }
 
@@ -290,7 +305,7 @@ export class ArrowGameController extends Component {
     }
   }
 
-  private handleCorrectClick() {
+  private handleCorrectClick(inputSource: DirectionInputSource = "button") {
     this.questionAnswered = true;
     this.comboCount += 1;
     this.correctCount += 1;
@@ -308,9 +323,11 @@ export class ArrowGameController extends Component {
     } else {
       playScoreFeedback();
     }
-    this.bottomGlowParticleEmitter?.playBurst(
-      Math.min(1.8, 0.45 + this.comboCount * 0.04),
-    );
+    if (inputSource !== "swipe") {
+      this.bottomGlowParticleEmitter?.playBurst(
+        Math.min(1.8, 0.45 + this.comboCount * 0.04),
+      );
+    }
     this.playCorrectClickSound();
 
     if (!this.autoRefreshArrow && this.refreshOnCorrectClick) {
@@ -379,6 +396,33 @@ export class ArrowGameController extends Component {
     const remainingLives = this.lifeDisplay?.loseLife();
     this.playWrongClickSound();
     return remainingLives;
+  }
+
+  private playSwipeParticleBurst(direction: ArrowDirection, isCorrect: boolean) {
+    const comboForFeedback = isCorrect ? this.comboCount + 1 : 0;
+    const multiplier = isCorrect
+      ? Math.min(1.8, 0.45 + comboForFeedback * 0.04)
+      : 0.52;
+
+    this.bottomGlowParticleEmitter?.playDirectionalBurst(
+      this.getSwipeParticleDirection(direction),
+      multiplier,
+    );
+  }
+
+  private getSwipeParticleDirection(direction: ArrowDirection) {
+    switch (direction) {
+      case ArrowDirection.Up:
+        return new Vec2(0, 1);
+      case ArrowDirection.Down:
+        return new Vec2(0, -1);
+      case ArrowDirection.Left:
+        return new Vec2(-1, 0);
+      case ArrowDirection.Right:
+        return new Vec2(1, 0);
+      default:
+        return new Vec2(0, 1);
+    }
   }
 
   private updateComboLabel() {
@@ -607,14 +651,13 @@ export class ArrowGameController extends Component {
       totalQuestions > 0
         ? (this.correctCount / totalQuestions) * 100
         : 0;
-    const historyBestScore = this.createMockHistoryBestScore(this.score);
     const durationMs = this.gameTimer
       ? this.gameTimer.getElapsedSeconds() * 1000
       : Math.max(0, endedAt - this.gameStartedAt);
 
     GameResultStore.setResult({
       score: this.score,
-      historyBestScore,
+      historyBestScore: 0,
       correctCount: this.correctCount,
       accuracy,
       fastestReaction: Number.isFinite(this.fastestReaction)
@@ -637,11 +680,6 @@ export class ArrowGameController extends Component {
     const now = Date.now();
     this.gameStartedAt = now;
     this.questionStartedAt = now;
-  }
-
-  private createMockHistoryBestScore(currentScore: number) {
-    const mockBase = 12823;
-    return Math.max(mockBase, currentScore);
   }
 
   private loadGameSummaryScene() {
