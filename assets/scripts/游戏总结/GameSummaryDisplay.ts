@@ -5,6 +5,7 @@ import { ScoreCountUpLabel } from "./ScoreCountUpLabel";
 const { ccclass, property } = _decorator;
 
 const ACHIEVEMENT_CACHE_DIRTY_KEY = "brain_twist_achievement_cache_dirty";
+const BEST_SCORE_CACHE_KEY = "brain_twist_best_score_cache_v1";
 
 type SubmitScoreResponse = {
   code: number;
@@ -175,6 +176,7 @@ export class GameSummaryDisplay extends Component {
       sys.localStorage.setItem(ACHIEVEMENT_CACHE_DIRTY_KEY, "1");
 
       if (typeof uploadResult.data.bestScore === "number") {
+        this.saveBestScoreCache(userId, uploadResult.data.bestScore);
         this.setScoreLabel(
           this.historyBestScoreLabel,
           this.formatNumber(uploadResult.data.bestScore),
@@ -221,6 +223,19 @@ export class GameSummaryDisplay extends Component {
     const endedAt = result.endedAt || "unknown-end";
     const score = Math.max(0, Math.floor(result.score));
     return `${userId}:${this.gameKey}:${this.gameMode}:${startedAt}:${endedAt}:${score}`;
+  }
+
+  private saveBestScoreCache(userId: string, bestScore: number) {
+    sys.localStorage.setItem(
+      BEST_SCORE_CACHE_KEY,
+      JSON.stringify({
+        userId,
+        gameKey: this.gameKey,
+        gameMode: this.gameMode,
+        savedAt: Date.now(),
+        bestScore: Math.max(0, Math.floor(bestScore)),
+      }),
+    );
   }
 
   private createSubmitScoreUrl() {

@@ -1999,7 +1999,14 @@
     "__prefab": null,
     "targetLabel": null,
     "maxScore": 5000,
-    "randomizeOnStart": true,
+    "randomizeOnStart": false,
+    "fetchBestScoreOnStart": true,
+    "backendBaseUrl": "http://localhost:3000",
+    "bestScoreApiPath": "/api/game-scores/best",
+    "gameKey": "reverse_brain",
+    "gameMode": "classic",
+    "useBestScoreCache": true,
+    "bestScoreCacheTtlSeconds": 60,
     "_id": "74u4TXfspMVqi/EpAHGPan"
   },
   {
