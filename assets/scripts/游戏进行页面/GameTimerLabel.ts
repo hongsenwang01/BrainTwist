@@ -11,7 +11,7 @@ export class GameTimerLabel extends Component {
   public autoStart = true;
 
   @property({ displayName: "倒计时秒数" })
-  public startSeconds = 120;
+  public startSeconds = 90;
 
   @property({ displayName: "倒计时模式" })
   public countdownMode = true;
@@ -104,6 +104,6 @@ export class GameTimerLabel extends Component {
   }
 
   private normalizeCountdownSeconds(seconds: number) {
-    return seconds > 0 ? seconds : 120;
+    return seconds > 0 ? seconds : 90;
   }
 }

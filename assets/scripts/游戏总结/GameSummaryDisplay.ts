@@ -11,6 +11,7 @@ type BestScoreCache = {
   userId: string;
   gameKey: string;
   gameMode: string;
+  difficulty: string;
   savedAt: number;
   bestScore: number;
 };
@@ -90,27 +91,21 @@ export class GameSummaryDisplay extends Component {
   public clientVersion = "dev";
 
   private hasUploadedScore = false;
+  private displayedHistoryBestScore = 0;
 
   start() {
     const result = GameResultStore.getResult();
-    this.render(result);
-
-    if (this.autoUploadScore) {
-      void this.loadHistoryBestScoreThenUpload(result);
-    }
+    this.prepareLabelsForLoading();
+    void this.loadSummaryDataThenRender(result);
   }
 
-  public render(result: GameResultData) {
-    const cachedBestScore = this.getCachedBestScore();
-    const displayBestScore =
-      typeof cachedBestScore === "number"
-        ? Math.max(cachedBestScore, result.historyBestScore)
-        : result.historyBestScore;
+  public render(result: GameResultData, historyBestScore = result.historyBestScore) {
+    this.displayedHistoryBestScore = Math.max(0, Math.floor(historyBestScore));
 
     this.setScoreLabel(this.scoreLabel, this.formatNumber(result.score), 0);
     this.setScoreLabel(
       this.historyBestScoreLabel,
-      this.formatNumber(displayBestScore),
+      this.formatNumber(this.displayedHistoryBestScore),
       this.historyScoreExtraDelay,
     );
     this.setLabel(this.correctCountLabel, `${result.correctCount}`);
@@ -146,6 +141,26 @@ export class GameSummaryDisplay extends Component {
     }
   }
 
+  private prepareLabelsForLoading() {
+    this.setPlainLabel(this.scoreLabel, "");
+    this.setPlainLabel(this.historyBestScoreLabel, "");
+    this.setLabel(this.correctCountLabel, "");
+    this.setLabel(this.accuracyLabel, "");
+    this.setLabel(this.fastestReactionLabel, "");
+    this.setLabel(this.maxComboLabel, "");
+    this.setLabel(this.durationLabel, "");
+    this.setLabel(this.wrongCountLabel, "");
+  }
+
+  private setPlainLabel(label: Label | null, text: string) {
+    if (!label) {
+      return;
+    }
+
+    label.node.getComponent(ScoreCountUpLabel)?.stop(false);
+    label.string = text;
+  }
+
   private formatNumber(value: number) {
     return Math.max(0, Math.floor(value))
       .toString()
@@ -163,7 +178,7 @@ export class GameSummaryDisplay extends Component {
 
   private async uploadScore(result: GameResultData) {
     if (this.hasUploadedScore) {
-      return;
+      return null;
     }
 
     this.hasUploadedScore = true;
@@ -171,7 +186,7 @@ export class GameSummaryDisplay extends Component {
     const userId = sys.localStorage.getItem("brain_twist_user_id");
     if (!userId) {
       warn("GameSummaryDisplay: userId is missing, skip score upload.");
-      return;
+      return null;
     }
 
     try {
@@ -185,7 +200,7 @@ export class GameSummaryDisplay extends Component {
 
       if (!response.ok) {
         warn(`GameSummaryDisplay: score upload failed, status ${response.status}.`);
-        return;
+        return null;
       }
 
       const uploadResult = (await response.json()) as SubmitScoreResponse;
@@ -195,26 +210,42 @@ export class GameSummaryDisplay extends Component {
             uploadResult.message ?? "unknown error"
           }.`,
         );
-        return;
+        return null;
       }
 
       sys.localStorage.setItem(ACHIEVEMENT_CACHE_DIRTY_KEY, "1");
 
       if (typeof uploadResult.data.bestScore === "number") {
-        this.saveBestScoreCache(userId, uploadResult.data.bestScore);
+        const bestScore = Math.max(0, Math.floor(uploadResult.data.bestScore));
+        this.saveBestScoreCache(userId, bestScore);
+        return bestScore;
       }
     } catch (error) {
       warn(`GameSummaryDisplay: score upload request failed, ${String(error)}.`);
     }
+
+    return null;
   }
 
-  private async loadHistoryBestScoreThenUpload(result: GameResultData) {
+  private async loadSummaryDataThenRender(result: GameResultData) {
     const userId = sys.localStorage.getItem("brain_twist_user_id");
+    let historyBestScore = this.getFallbackHistoryBestScore(result);
+
     if (userId) {
-      await this.loadHistoryBestScoreBeforeSubmit(userId);
+      const remoteHistoryBestScore = await this.loadHistoryBestScoreBeforeSubmit(userId);
+      if (typeof remoteHistoryBestScore === "number") {
+        historyBestScore = Math.max(historyBestScore, remoteHistoryBestScore);
+      }
     }
 
-    await this.uploadScore(result);
+    if (this.autoUploadScore) {
+      const uploadedBestScore = await this.uploadScore(result);
+      if (typeof uploadedBestScore === "number") {
+        historyBestScore = Math.max(historyBestScore, uploadedBestScore);
+      }
+    }
+
+    this.render(result, historyBestScore);
   }
 
   private async loadHistoryBestScoreBeforeSubmit(userId: string) {
@@ -228,25 +259,23 @@ export class GameSummaryDisplay extends Component {
 
       if (!response.ok) {
         warn(`GameSummaryDisplay: best score request failed, status ${response.status}.`);
-        return;
+        return null;
       }
 
       const result = (await response.json()) as BestScoreResponse;
       if (result.code !== 0 || !result.data || typeof result.data.bestScore !== "number") {
         warn(`GameSummaryDisplay: best score request failed, ${result.message ?? "unknown error"}.`);
-        return;
+        return null;
       }
 
       const historyBestScore = Math.max(0, Math.floor(result.data.bestScore));
       this.saveBestScoreCache(userId, historyBestScore);
-      this.setScoreLabel(
-        this.historyBestScoreLabel,
-        this.formatNumber(historyBestScore),
-        this.historyScoreExtraDelay,
-      );
+      return historyBestScore;
     } catch (error) {
       warn(`GameSummaryDisplay: best score request failed, ${String(error)}.`);
     }
+
+    return null;
   }
 
   private createSubmitScorePayload(userId: string, result: GameResultData) {
@@ -293,6 +322,7 @@ export class GameSummaryDisplay extends Component {
         userId,
         gameKey: this.gameKey,
         gameMode: this.gameMode,
+        difficulty: this.difficulty,
         savedAt: Date.now(),
         bestScore: Math.max(0, Math.floor(bestScore)),
       }),
@@ -316,6 +346,7 @@ export class GameSummaryDisplay extends Component {
         cache.userId !== userId ||
         cache.gameKey !== this.gameKey ||
         cache.gameMode !== this.gameMode ||
+        cache.difficulty !== this.difficulty ||
         typeof cache.bestScore !== "number"
       ) {
         return null;
@@ -326,6 +357,13 @@ export class GameSummaryDisplay extends Component {
       warn(`GameSummaryDisplay: read best score cache failed, ${String(error)}.`);
       return null;
     }
+  }
+
+  private getFallbackHistoryBestScore(result: GameResultData) {
+    const cachedBestScore = this.getCachedBestScore();
+    return typeof cachedBestScore === "number"
+      ? Math.max(cachedBestScore, result.historyBestScore)
+      : Math.max(0, Math.floor(result.historyBestScore));
   }
 
   private createSubmitScoreUrl() {
@@ -345,6 +383,7 @@ export class GameSummaryDisplay extends Component {
       `userId=${encodeURIComponent(userId)}`,
       `gameKey=${encodeURIComponent(this.gameKey)}`,
       `gameMode=${encodeURIComponent(this.gameMode)}`,
+      `difficulty=${encodeURIComponent(this.difficulty)}`,
     ].join("&");
     return `${baseUrl}${path}?${query}`;
   }

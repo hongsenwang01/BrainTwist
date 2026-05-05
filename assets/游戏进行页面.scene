@@ -1486,7 +1486,7 @@
       "b": 255,
       "a": 250
     },
-    "_string": "120",
+    "_string": "90",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
     "_actualFontSize": 52,
@@ -1540,7 +1540,7 @@
     "__prefab": null,
     "targetLabel": null,
     "autoStart": true,
-    "startSeconds": 120,
+    "startSeconds": 90,
     "countdownMode": true,
     "minDigits": 1,
     "_id": "84mXzvlJhI+4cv7XnnnOFm"
@@ -6120,6 +6120,25 @@
     "refreshOnCorrectClick": true,
     "autoRefreshArrow": true,
     "arrowRefreshInterval": 1,
+    "totalGameSeconds": 90,
+    "speedUpPromptLabel": null,
+    "speedUpElapsedSeconds": [
+      25,
+      50,
+      70
+    ],
+    "speedUpRefreshIntervals": [
+      0.82,
+      0.65,
+      0.48
+    ],
+    "speedUpPromptTexts": [
+      "开始加速!",
+      "再快一点!",
+      "极速挑战!"
+    ],
+    "speedUpPromptDuration": 0.85,
+    "speedUpPromptY": 180,
     "loseLifeOnMiss": false,
     "startPaused": false,
     "homeSceneName": "游戏首页",
@@ -6143,7 +6162,7 @@
     "__prefab": null,
     "targetLabel": null,
     "autoStart": true,
-    "startSeconds": 0,
+    "startSeconds": 90,
     "countdownMode": true,
     "minDigits": 1,
     "_id": "48zFc/BEVJd4/j4pWhBD3B"
