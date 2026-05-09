@@ -1,0 +1,134 @@
+{
+  "ver": "1.0.27",
+  "importer": "image",
+  "imported": true,
+  "uuid": "29a85470-75c8-411b-873e-35e2327912a3",
+  "files": [
+    ".json",
+    ".png"
+  ],
+  "subMetas": {
+    "6c48a": {
+      "importer": "texture",
+      "uuid": "29a85470-75c8-411b-873e-35e2327912a3@6c48a",
+      "displayName": "时间沙漏",
+      "id": "6c48a",
+      "name": "texture",
+      "userData": {
+        "wrapModeS": "clamp-to-edge",
+        "wrapModeT": "clamp-to-edge",
+        "imageUuidOrDatabaseUri": "29a85470-75c8-411b-873e-35e2327912a3",
+        "isUuid": true,
+        "visible": false,
+        "minfilter": "linear",
+        "magfilter": "linear",
+        "mipfilter": "none",
+        "anisotropy": 0
+      },
+      "ver": "1.0.22",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "f9941": {
+      "importer": "sprite-frame",
+      "uuid": "29a85470-75c8-411b-873e-35e2327912a3@f9941",
+      "displayName": "时间沙漏",
+      "id": "f9941",
+      "name": "spriteFrame",
+      "userData": {
+        "trimThreshold": 1,
+        "rotated": false,
+        "offsetX": 0,
+        "offsetY": 1,
+        "trimX": 161,
+        "trimY": 132,
+        "width": 932,
+        "height": 988,
+        "rawWidth": 1254,
+        "rawHeight": 1254,
+        "borderTop": 0,
+        "borderBottom": 0,
+        "borderLeft": 0,
+        "borderRight": 0,
+        "packable": true,
+        "pixelsToUnit": 100,
+        "pivotX": 0.5,
+        "pivotY": 0.5,
+        "meshType": 0,
+        "vertices": {
+          "rawPosition": [
+            -466,
+            -494,
+            0,
+            466,
+            -494,
+            0,
+            -466,
+            494,
+            0,
+            466,
+            494,
+            0
+          ],
+          "indexes": [
+            0,
+            1,
+            2,
+            2,
+            1,
+            3
+          ],
+          "uv": [
+            161,
+            1122,
+            1093,
+            1122,
+            161,
+            134,
+            1093,
+            134
+          ],
+          "nuv": [
+            0.1283891547049442,
+            0.10685805422647528,
+            0.8716108452950558,
+            0.10685805422647528,
+            0.1283891547049442,
+            0.8947368421052632,
+            0.8716108452950558,
+            0.8947368421052632
+          ],
+          "minPos": [
+            -466,
+            -494,
+            0
+          ],
+          "maxPos": [
+            466,
+            494,
+            0
+          ]
+        },
+        "isUuid": true,
+        "imageUuidOrDatabaseUri": "29a85470-75c8-411b-873e-35e2327912a3@6c48a",
+        "atlasUuid": "",
+        "trimType": "auto"
+      },
+      "ver": "1.0.12",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    }
+  },
+  "userData": {
+    "type": "sprite-frame",
+    "fixAlphaTransparencyArtifacts": false,
+    "hasAlpha": true,
+    "redirect": "29a85470-75c8-411b-873e-35e2327912a3@6c48a"
+  }
+}

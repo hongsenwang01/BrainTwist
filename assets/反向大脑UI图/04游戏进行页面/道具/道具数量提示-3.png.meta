@@ -1,0 +1,134 @@
+{
+  "ver": "1.0.27",
+  "importer": "image",
+  "imported": true,
+  "uuid": "29f2f405-5206-4e04-8670-03a9a1060f3d",
+  "files": [
+    ".json",
+    ".png"
+  ],
+  "subMetas": {
+    "6c48a": {
+      "importer": "texture",
+      "uuid": "29f2f405-5206-4e04-8670-03a9a1060f3d@6c48a",
+      "displayName": "道具数量提示-3",
+      "id": "6c48a",
+      "name": "texture",
+      "userData": {
+        "wrapModeS": "clamp-to-edge",
+        "wrapModeT": "clamp-to-edge",
+        "imageUuidOrDatabaseUri": "29f2f405-5206-4e04-8670-03a9a1060f3d",
+        "isUuid": true,
+        "visible": false,
+        "minfilter": "linear",
+        "magfilter": "linear",
+        "mipfilter": "none",
+        "anisotropy": 0
+      },
+      "ver": "1.0.22",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "f9941": {
+      "importer": "sprite-frame",
+      "uuid": "29f2f405-5206-4e04-8670-03a9a1060f3d@f9941",
+      "displayName": "道具数量提示-3",
+      "id": "f9941",
+      "name": "spriteFrame",
+      "userData": {
+        "trimThreshold": 1,
+        "rotated": false,
+        "offsetX": 7,
+        "offsetY": -1.5,
+        "trimX": 121,
+        "trimY": 101,
+        "width": 1026,
+        "height": 1055,
+        "rawWidth": 1254,
+        "rawHeight": 1254,
+        "borderTop": 0,
+        "borderBottom": 0,
+        "borderLeft": 0,
+        "borderRight": 0,
+        "packable": true,
+        "pixelsToUnit": 100,
+        "pivotX": 0.5,
+        "pivotY": 0.5,
+        "meshType": 0,
+        "vertices": {
+          "rawPosition": [
+            -513,
+            -527.5,
+            0,
+            513,
+            -527.5,
+            0,
+            -513,
+            527.5,
+            0,
+            513,
+            527.5,
+            0
+          ],
+          "indexes": [
+            0,
+            1,
+            2,
+            2,
+            1,
+            3
+          ],
+          "uv": [
+            121,
+            1153,
+            1147,
+            1153,
+            121,
+            98,
+            1147,
+            98
+          ],
+          "nuv": [
+            0.09649122807017543,
+            0.07814992025518341,
+            0.9146730462519936,
+            0.07814992025518341,
+            0.09649122807017543,
+            0.919457735247209,
+            0.9146730462519936,
+            0.919457735247209
+          ],
+          "minPos": [
+            -513,
+            -527.5,
+            0
+          ],
+          "maxPos": [
+            513,
+            527.5,
+            0
+          ]
+        },
+        "isUuid": true,
+        "imageUuidOrDatabaseUri": "29f2f405-5206-4e04-8670-03a9a1060f3d@6c48a",
+        "atlasUuid": "",
+        "trimType": "auto"
+      },
+      "ver": "1.0.12",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    }
+  },
+  "userData": {
+    "type": "sprite-frame",
+    "fixAlphaTransparencyArtifacts": false,
+    "hasAlpha": true,
+    "redirect": "29f2f405-5206-4e04-8670-03a9a1060f3d@6c48a"
+  }
+}

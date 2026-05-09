@@ -2,10 +2,14 @@ import {
   _decorator,
   AudioClip,
   AudioSource,
+  Button,
   Component,
   director,
+  isValid,
   Label,
   Node,
+  Sprite,
+  SpriteFrame,
   Tween,
   tween,
   Vec2,
@@ -111,6 +115,24 @@ export class ArrowGameController extends Component {
   @property({ displayName: "游戏总时长秒" })
   public totalGameSeconds = 90;
 
+  @property({ type: Node, displayName: "时间沙漏道具节点" })
+  public timeSlowPowerUpNode: Node | null = null;
+
+  @property({ type: Sprite, displayName: "时间沙漏数量图片" })
+  public timeSlowCountSprite: Sprite | null = null;
+
+  @property({ type: [SpriteFrame], displayName: "道具数量数字图" })
+  public powerUpCountSpriteFrames: SpriteFrame[] = [];
+
+  @property({ displayName: "自动查找时间沙漏道具" })
+  public autoFindTimeSlowPowerUp = true;
+
+  @property({ displayName: "时间沙漏持续秒数" })
+  public timeSlowDuration = 5;
+
+  @property({ displayName: "时间沙漏放缓倍率" })
+  public timeSlowIntervalMultiplier = 1.6;
+
   @property({ displayName: "未操作扣生命" })
   public loseLifeOnMiss = true;
 
@@ -160,6 +182,8 @@ export class ArrowGameController extends Component {
   private currentArrowRefreshInterval = 2;
   private isArrowRefreshLoopRunning = false;
   private autoRefreshElapsedSeconds = 0;
+  private timeSlowPowerUpCount = 0;
+  private timeSlowRemainingSeconds = 0;
 
   onLoad() {
     this.isPaused = this.startPaused;
@@ -167,6 +191,8 @@ export class ArrowGameController extends Component {
     this.currentArrowRefreshInterval = this.getBaseArrowRefreshInterval();
     this.cacheScoreLabelOriginScale();
     this.setupArrowDisplay();
+    this.setupTimeSlowPowerUp();
+    this.updateTimeSlowPowerUpCountView();
     this.updateComboLabel();
     this.updateScoreLabel();
     this.refreshRule();
@@ -187,16 +213,19 @@ export class ArrowGameController extends Component {
   }
 
   onDisable() {
+    this.unbindTimeSlowPowerUp();
     this.stopArrowRefreshLoop();
     this.stopRunningFeedbackTweens();
   }
 
   onDestroy() {
+    this.unbindTimeSlowPowerUp();
     this.stopArrowRefreshLoop();
     this.stopRunningFeedbackTweens();
   }
 
   update(deltaTime: number) {
+    this.updateTimeSlowPowerUp(deltaTime);
     this.updateSmoothArrowRefresh(deltaTime);
   }
 
@@ -257,6 +286,7 @@ export class ArrowGameController extends Component {
     this.maxCombo = 0;
     this.fastestReaction = Number.POSITIVE_INFINITY;
     this.resetSpeedUpState();
+    this.timeSlowRemainingSeconds = 0;
     this.isGameEnded = false;
     this.updateComboLabel();
     this.stopScoreTweens();
@@ -638,7 +668,15 @@ export class ArrowGameController extends Component {
     );
     const progress = this.clamp01(this.getGameElapsedSeconds() / reachMinimumAtElapsed);
 
-    return startInterval + (minimumInterval - startInterval) * progress;
+    const interval = startInterval + (minimumInterval - startInterval) * progress;
+    if (this.timeSlowRemainingSeconds <= 0) {
+      return interval;
+    }
+
+    return Math.min(
+      startInterval,
+      interval * Math.max(1, this.timeSlowIntervalMultiplier),
+    );
   }
 
   private clamp01(value: number) {
@@ -647,6 +685,120 @@ export class ArrowGameController extends Component {
     }
 
     return Math.max(0, Math.min(1, value));
+  }
+
+  private setupTimeSlowPowerUp() {
+    if (!this.timeSlowPowerUpNode && this.autoFindTimeSlowPowerUp) {
+      this.timeSlowPowerUpNode = this.findNodeInChildren(this.node, "时间沙漏");
+    }
+
+    if (!this.timeSlowCountSprite && this.timeSlowPowerUpNode) {
+      this.timeSlowCountSprite = this
+        .findNodeInChildren(this.timeSlowPowerUpNode, "数量")
+        ?.getComponent(Sprite) ?? null;
+    }
+
+    if (!this.timeSlowPowerUpNode) {
+      return;
+    }
+
+    let button = this.timeSlowPowerUpNode.getComponent(Button);
+    if (!button) {
+      button = this.timeSlowPowerUpNode.addComponent(Button);
+      button.transition = Button.Transition.NONE;
+    }
+
+    this.timeSlowPowerUpNode.off(
+      Button.EventType.CLICK,
+      this.onTimeSlowPowerUpClicked,
+      this,
+    );
+    this.timeSlowPowerUpNode.on(
+      Button.EventType.CLICK,
+      this.onTimeSlowPowerUpClicked,
+      this,
+    );
+  }
+
+  private unbindTimeSlowPowerUp() {
+    if (!this.timeSlowPowerUpNode || !isValid(this.timeSlowPowerUpNode)) {
+      return;
+    }
+
+    this.timeSlowPowerUpNode.off(
+      Button.EventType.CLICK,
+      this.onTimeSlowPowerUpClicked,
+      this,
+    );
+  }
+
+  private onTimeSlowPowerUpClicked() {
+    if (this.isPaused || this.isGameEnded) {
+      return;
+    }
+
+    if (this.timeSlowPowerUpCount <= 0) {
+      this.obtainTimeSlowPowerUp();
+      return;
+    }
+
+    this.useTimeSlowPowerUp();
+  }
+
+  private obtainTimeSlowPowerUp() {
+    this.timeSlowPowerUpCount = 1;
+    this.updateTimeSlowPowerUpCountView();
+  }
+
+  private useTimeSlowPowerUp() {
+    this.timeSlowPowerUpCount = Math.max(0, this.timeSlowPowerUpCount - 1);
+    this.timeSlowRemainingSeconds = Math.max(0.1, this.timeSlowDuration);
+    this.autoRefreshElapsedSeconds = Math.min(
+      this.autoRefreshElapsedSeconds,
+      this.getCurrentSmoothArrowRefreshInterval(),
+    );
+    this.updateTimeSlowPowerUpCountView();
+  }
+
+  private updateTimeSlowPowerUp(deltaTime: number) {
+    if (this.isPaused || this.isGameEnded || this.timeSlowRemainingSeconds <= 0) {
+      return;
+    }
+
+    this.timeSlowRemainingSeconds = Math.max(
+      0,
+      this.timeSlowRemainingSeconds - deltaTime,
+    );
+  }
+
+  private updateTimeSlowPowerUpCountView() {
+    if (!this.timeSlowCountSprite || this.powerUpCountSpriteFrames.length === 0) {
+      return;
+    }
+
+    const frameIndex = Math.max(
+      0,
+      Math.min(this.timeSlowPowerUpCount, this.powerUpCountSpriteFrames.length - 1),
+    );
+    const spriteFrame = this.powerUpCountSpriteFrames[frameIndex];
+    if (spriteFrame) {
+      this.timeSlowCountSprite.spriteFrame = spriteFrame;
+    }
+  }
+
+  private findNodeInChildren(node: Node, nodeName: string): Node | null {
+    if (node.name === nodeName) {
+      return node;
+    }
+
+    for (const child of node.children) {
+      const result = this.findNodeInChildren(child, nodeName);
+      if (result) {
+        return result;
+      }
+    }
+
+    return null;
   }
 
   private refreshRule() {
