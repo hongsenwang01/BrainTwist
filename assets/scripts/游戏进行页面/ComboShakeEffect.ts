@@ -1,4 +1,5 @@
 import { _decorator, Component, tween, Vec3 } from "cc";
+import { GameSettings } from "../设置/GameSettings";
 
 const { ccclass, property } = _decorator;
 
@@ -21,6 +22,10 @@ export class ComboShakeEffect extends Component {
   }
 
   public play() {
+    if (!GameSettings.isVibrationEnabled()) {
+      return;
+    }
+
     this.recordOrigin();
     tween(this.node).stop();
 

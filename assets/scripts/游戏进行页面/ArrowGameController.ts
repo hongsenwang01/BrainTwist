@@ -2,15 +2,12 @@ import {
   _decorator,
   AudioClip,
   AudioSource,
-  Color,
   Component,
   director,
   Label,
   Node,
   Tween,
   tween,
-  UIOpacity,
-  UITransform,
   Vec2,
   Vec3,
   warn,
@@ -29,6 +26,7 @@ import { BottomGlowParticleEmitter } from "./BottomGlowParticleEmitter";
 import { ScoreGainPopup } from "./ScoreGainPopup";
 import { GameResultStore } from "../工具/GameResultStore";
 import { TextLetterSpacing } from "../工具/TextLetterSpacing";
+import { GameSettings } from "../设置/GameSettings";
 
 const { ccclass, property } = _decorator;
 
@@ -104,26 +102,14 @@ export class ArrowGameController extends Component {
   @property({ displayName: "箭头刷新间隔" })
   public arrowRefreshInterval = 2;
 
+  @property({ displayName: "最短箭头刷新间隔" })
+  public minimumArrowRefreshInterval = 0.8;
+
+  @property({ displayName: "达到最短间隔的剩余秒数" })
+  public reachMinimumIntervalRemainingSeconds = 15;
+
   @property({ displayName: "游戏总时长秒" })
   public totalGameSeconds = 90;
-
-  @property({ type: Label, displayName: "加速提示文本" })
-  public speedUpPromptLabel: Label | null = null;
-
-  @property({ type: [Number], displayName: "加速触发秒数" })
-  public speedUpElapsedSeconds: number[] = [25, 50, 70];
-
-  @property({ type: [Number], displayName: "加速后刷新间隔" })
-  public speedUpRefreshIntervals: number[] = [0.82, 0.65, 0.48];
-
-  @property({ type: [String], displayName: "加速提示文案" })
-  public speedUpPromptTexts: string[] = ["开始加速!", "再快一点!", "极速挑战!"];
-
-  @property({ displayName: "加速提示显示时间" })
-  public speedUpPromptDuration = 0.85;
-
-  @property({ displayName: "加速提示Y坐标" })
-  public speedUpPromptY = 180;
 
   @property({ displayName: "未操作扣生命" })
   public loseLifeOnMiss = true;
@@ -172,9 +158,8 @@ export class ArrowGameController extends Component {
   private scoreTweenState = { value: 0 };
   private scoreLabelOriginScale = new Vec3(1, 1, 1);
   private currentArrowRefreshInterval = 2;
-  private speedUpStageIndex = 0;
-  private speedUpPromptNode: Node | null = null;
-  private speedUpPromptOpacity: UIOpacity | null = null;
+  private isArrowRefreshLoopRunning = false;
+  private autoRefreshElapsedSeconds = 0;
 
   onLoad() {
     this.isPaused = this.startPaused;
@@ -204,13 +189,15 @@ export class ArrowGameController extends Component {
   onDisable() {
     this.stopArrowRefreshLoop();
     this.stopRunningFeedbackTweens();
-    this.stopSpeedUpWatcher();
   }
 
   onDestroy() {
     this.stopArrowRefreshLoop();
     this.stopRunningFeedbackTweens();
-    this.stopSpeedUpWatcher();
+  }
+
+  update(deltaTime: number) {
+    this.updateSmoothArrowRefresh(deltaTime);
   }
 
   public clickUp() {
@@ -333,7 +320,6 @@ export class ArrowGameController extends Component {
     this.isPaused = true;
     this.gameTimer?.pauseTimer();
     this.stopArrowRefreshLoop();
-    this.stopSpeedUpWatcher();
     this.stopRunningFeedbackTweens();
     this.saveGameResult();
 
@@ -533,7 +519,6 @@ export class ArrowGameController extends Component {
   private stopRunningFeedbackTweens() {
     this.stopScoreTweens();
     this.scoreGainPopup?.stopAll();
-    this.hideSpeedUpPrompt();
   }
 
   private cacheScoreLabelOriginScale() {
@@ -573,23 +558,20 @@ export class ArrowGameController extends Component {
 
   private startArrowRefreshLoop() {
     this.stopArrowRefreshLoop();
-    this.stopSpeedUpWatcher();
 
     if (!this.autoRefreshArrow) {
       return;
     }
 
-    const interval = Math.max(0.1, this.currentArrowRefreshInterval);
-    this.schedule(this.advanceQuestionByTimer, interval);
-    this.schedule(this.updateSpeedUpStage, 0.2);
+    this.currentArrowRefreshInterval = this.getCurrentSmoothArrowRefreshInterval();
+    this.autoRefreshElapsedSeconds = 0;
+    this.isArrowRefreshLoopRunning = true;
   }
 
   private stopArrowRefreshLoop() {
+    this.isArrowRefreshLoopRunning = false;
+    this.autoRefreshElapsedSeconds = 0;
     this.unschedule(this.advanceQuestionByTimer);
-  }
-
-  private stopSpeedUpWatcher() {
-    this.unschedule(this.updateSpeedUpStage);
   }
 
   private advanceQuestionByTimer() {
@@ -604,40 +586,33 @@ export class ArrowGameController extends Component {
     }
   }
 
-  private updateSpeedUpStage() {
-    if (this.isPaused || this.isGameEnded) {
+  private updateSmoothArrowRefresh(deltaTime: number) {
+    if (
+      !this.isArrowRefreshLoopRunning ||
+      !this.autoRefreshArrow ||
+      this.isPaused ||
+      this.isGameEnded
+    ) {
       return;
     }
 
-    const nextTriggerSecond = this.getSpeedUpTriggerSecond(this.speedUpStageIndex);
-    if (nextTriggerSecond === null || this.getGameElapsedSeconds() < nextTriggerSecond) {
+    this.currentArrowRefreshInterval = this.getCurrentSmoothArrowRefreshInterval();
+    this.autoRefreshElapsedSeconds += deltaTime;
+
+    if (this.autoRefreshElapsedSeconds < this.currentArrowRefreshInterval) {
       return;
     }
 
-    const nextInterval = this.getSpeedUpRefreshInterval(this.speedUpStageIndex);
-    if (nextInterval === null) {
-      this.speedUpStageIndex += 1;
-      return;
-    }
-
-    this.currentArrowRefreshInterval = nextInterval;
-    this.speedUpStageIndex += 1;
-    this.restartArrowRefreshLoopWithCurrentInterval();
-    this.playSpeedUpPrompt(this.getSpeedUpPromptText(this.speedUpStageIndex - 1));
-  }
-
-  private restartArrowRefreshLoopWithCurrentInterval() {
-    this.unschedule(this.advanceQuestionByTimer);
-    this.schedule(
-      this.advanceQuestionByTimer,
-      Math.max(0.1, this.currentArrowRefreshInterval),
+    this.autoRefreshElapsedSeconds = Math.max(
+      0,
+      this.autoRefreshElapsedSeconds - this.currentArrowRefreshInterval,
     );
+    this.advanceQuestionByTimer();
   }
 
   private resetSpeedUpState() {
-    this.speedUpStageIndex = 0;
     this.currentArrowRefreshInterval = this.getBaseArrowRefreshInterval();
-    this.hideSpeedUpPrompt();
+    this.autoRefreshElapsedSeconds = 0;
   }
 
   private getBaseArrowRefreshInterval() {
@@ -646,113 +621,32 @@ export class ArrowGameController extends Component {
 
   private getGameElapsedSeconds() {
     return this.gameTimer
-      ? this.gameTimer.getElapsedSeconds()
+      ? this.gameTimer.getElapsedSecondsPrecise()
       : Math.max(0, (Date.now() - this.gameStartedAt) / 1000);
   }
 
-  private getSpeedUpTriggerSecond(index: number) {
-    const triggerSecond = this.speedUpElapsedSeconds[index];
-    if (typeof triggerSecond !== "number" || triggerSecond < 0) {
-      return null;
-    }
+  private getCurrentSmoothArrowRefreshInterval() {
+    const startInterval = this.getBaseArrowRefreshInterval();
+    const minimumInterval = Math.max(
+      0.1,
+      Math.min(startInterval, this.minimumArrowRefreshInterval),
+    );
+    const totalSeconds = Math.max(0.1, this.totalGameSeconds);
+    const reachMinimumAtElapsed = Math.max(
+      0.1,
+      totalSeconds - Math.max(0, this.reachMinimumIntervalRemainingSeconds),
+    );
+    const progress = this.clamp01(this.getGameElapsedSeconds() / reachMinimumAtElapsed);
 
-    return triggerSecond;
+    return startInterval + (minimumInterval - startInterval) * progress;
   }
 
-  private getSpeedUpRefreshInterval(index: number) {
-    const interval = this.speedUpRefreshIntervals[index];
-    if (typeof interval !== "number" || interval <= 0) {
-      return null;
+  private clamp01(value: number) {
+    if (!Number.isFinite(value)) {
+      return 0;
     }
 
-    return Math.max(0.1, interval);
-  }
-
-  private getSpeedUpPromptText(index: number) {
-    return this.speedUpPromptTexts[index] ?? "开始加速!";
-  }
-
-  private playSpeedUpPrompt(text: string) {
-    const label = this.speedUpPromptLabel ?? this.getOrCreateSpeedUpPromptLabel();
-    if (!label) {
-      return;
-    }
-
-    const promptNode = label.node;
-    const opacity = this.speedUpPromptOpacity ?? promptNode.getComponent(UIOpacity);
-    if (!opacity) {
-      return;
-    }
-
-    Tween.stopAllByTarget(promptNode);
-    Tween.stopAllByTarget(opacity);
-    label.string = text;
-    promptNode.active = true;
-    promptNode.setPosition(new Vec3(0, this.speedUpPromptY, 0));
-    promptNode.setScale(0.72, 0.72, 1);
-    opacity.opacity = 0;
-
-    tween(opacity)
-      .to(0.12, { opacity: 255 }, { easing: "sineOut" })
-      .delay(Math.max(0.1, this.speedUpPromptDuration))
-      .to(0.18, { opacity: 0 }, { easing: "sineIn" })
-      .call(() => {
-        promptNode.active = false;
-      })
-      .start();
-
-    tween(promptNode)
-      .to(0.14, { scale: new Vec3(1.18, 1.18, 1) }, { easing: "backOut" })
-      .to(0.12, { scale: new Vec3(1, 1, 1) }, { easing: "sineOut" })
-      .delay(Math.max(0.1, this.speedUpPromptDuration))
-      .to(0.18, { position: new Vec3(0, this.speedUpPromptY + 34, 0) }, { easing: "sineIn" })
-      .start();
-  }
-
-  private hideSpeedUpPrompt() {
-    const label = this.speedUpPromptLabel;
-    const promptNode = label?.node ?? this.speedUpPromptNode;
-    if (!promptNode) {
-      return;
-    }
-
-    Tween.stopAllByTarget(promptNode);
-    const opacity = this.speedUpPromptOpacity ?? promptNode.getComponent(UIOpacity);
-    if (opacity) {
-      Tween.stopAllByTarget(opacity);
-      opacity.opacity = 0;
-    }
-    promptNode.active = false;
-  }
-
-  private getOrCreateSpeedUpPromptLabel() {
-    if (this.speedUpPromptLabel) {
-      return this.speedUpPromptLabel;
-    }
-
-    const promptNode = new Node("Speed Up Prompt");
-    promptNode.parent = this.node;
-    promptNode.layer = this.node.layer;
-    promptNode.setPosition(new Vec3(0, this.speedUpPromptY, 0));
-
-    const transform = promptNode.addComponent(UITransform);
-    transform.setContentSize(360, 84);
-
-    const label = promptNode.addComponent(Label);
-    label.fontSize = 46;
-    label.lineHeight = 56;
-    label.color = new Color(255, 232, 76, 255);
-    label.horizontalAlign = Label.HorizontalAlign.CENTER;
-    label.verticalAlign = Label.VerticalAlign.CENTER;
-
-    const opacity = promptNode.addComponent(UIOpacity);
-    opacity.opacity = 0;
-    promptNode.active = false;
-
-    this.speedUpPromptNode = promptNode;
-    this.speedUpPromptLabel = label;
-    this.speedUpPromptOpacity = opacity;
-    return label;
+    return Math.max(0, Math.min(1, value));
   }
 
   private refreshRule() {
@@ -817,7 +711,12 @@ export class ArrowGameController extends Component {
       return;
     }
 
-    this.getOrCreateAudioSource().playOneShot(clip, volume);
+    const effectiveVolume = GameSettings.getEffectiveEffectsVolume(volume);
+    if (effectiveVolume <= 0) {
+      return;
+    }
+
+    this.getOrCreateAudioSource().playOneShot(clip, effectiveVolume);
   }
 
   private getOrCreateAudioSource() {

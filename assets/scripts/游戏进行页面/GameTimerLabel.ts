@@ -78,6 +78,10 @@ export class GameTimerLabel extends Component {
     return Math.floor(this.elapsedSeconds);
   }
 
+  public getElapsedSecondsPrecise() {
+    return this.elapsedSeconds;
+  }
+
   public getRemainingSeconds() {
     return Math.max(0, Math.ceil(this.startSeconds - this.elapsedSeconds));
   }

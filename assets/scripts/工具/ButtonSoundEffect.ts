@@ -7,6 +7,7 @@ import {
   Node,
   warn,
 } from "cc";
+import { GameSettings } from "../设置/GameSettings";
 
 const { ccclass, property } = _decorator;
 
@@ -41,9 +42,14 @@ export class ButtonSoundEffect extends Component {
       return;
     }
 
+    const volume = GameSettings.getEffectiveEffectsVolume(this.volume);
+    if (volume <= 0) {
+      return;
+    }
+
     const audioSource = this.getOrCreateAudioSource();
-    audioSource.volume = this.volume;
-    audioSource.playOneShot(this.clickSound, this.volume);
+    audioSource.volume = volume;
+    audioSource.playOneShot(this.clickSound, volume);
   }
 
   private getOrCreateAudioSource() {

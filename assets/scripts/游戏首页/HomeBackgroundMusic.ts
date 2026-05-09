@@ -6,6 +6,7 @@ import {
   resources,
   warn,
 } from "cc";
+import { GameSettings } from "../设置/GameSettings";
 
 const { ccclass, property } = _decorator;
 
@@ -31,8 +32,13 @@ export class HomeBackgroundMusic extends Component {
 
   private audioSource: AudioSource | null = null;
 
+  onLoad() {
+    GameSettings.onChanged(this.applyCurrentSettings, this);
+  }
+
   start() {
     this.audioSource = this.getOrCreateAudioSource();
+    this.applyCurrentSettings();
 
     if (this.playOnStart) {
       this.playRandomMusic();
@@ -40,6 +46,7 @@ export class HomeBackgroundMusic extends Component {
   }
 
   onDestroy() {
+    GameSettings.offChanged(this.applyCurrentSettings, this);
     this.audioSource?.stop();
   }
 
@@ -76,8 +83,16 @@ export class HomeBackgroundMusic extends Component {
     audioSource.stop();
     audioSource.clip = clip;
     audioSource.loop = this.loop;
-    audioSource.volume = this.volume;
+    audioSource.volume = GameSettings.getEffectiveMusicVolume(this.volume);
     audioSource.play();
+  }
+
+  private applyCurrentSettings() {
+    if (!this.audioSource) {
+      return;
+    }
+
+    this.audioSource.volume = GameSettings.getEffectiveMusicVolume(this.volume);
   }
 
   private getOrCreateAudioSource() {
