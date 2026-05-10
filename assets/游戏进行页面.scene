@@ -6810,6 +6810,12 @@
     "reviveHeartCountSprite": {
       "__id__": 156
     },
+    "normalCompassPowerUpNode": {
+      "__id__": 165
+    },
+    "normalCompassCountSprite": {
+      "__id__": 168
+    },
     "powerUpCountSpriteFrames": [
       {
         "__uuid__": "d1c88c3e-ebc4-4f3d-8102-db26c1667ec3@f9941",
@@ -6822,7 +6828,10 @@
     ],
     "autoFindTimeSlowPowerUp": true,
     "autoFindReviveHeartPowerUp": true,
+    "autoFindNormalCompassPowerUp": true,
     "initialReviveHeartPowerUpCount": 0,
+    "initialNormalCompassPowerUpCount": 1,
+    "normalCompassForcedArrowCount": 10,
     "timeSlowDuration": 5,
     "timeSlowIntervalMultiplier": 1.6,
     "reviveProtectPromptParent": null,

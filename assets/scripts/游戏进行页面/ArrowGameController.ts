@@ -130,6 +130,12 @@ export class ArrowGameController extends Component {
   @property({ type: Sprite, displayName: "复活之心数量图片" })
   public reviveHeartCountSprite: Sprite | null = null;
 
+  @property({ type: Node, displayName: "正向罗盘道具节点" })
+  public normalCompassPowerUpNode: Node | null = null;
+
+  @property({ type: Sprite, displayName: "正向罗盘数量图片" })
+  public normalCompassCountSprite: Sprite | null = null;
+
   @property({ type: [SpriteFrame], displayName: "道具数量数字图" })
   public powerUpCountSpriteFrames: SpriteFrame[] = [];
 
@@ -139,8 +145,17 @@ export class ArrowGameController extends Component {
   @property({ displayName: "自动查找复活之心道具" })
   public autoFindReviveHeartPowerUp = true;
 
+  @property({ displayName: "自动查找正向罗盘道具" })
+  public autoFindNormalCompassPowerUp = true;
+
   @property({ displayName: "复活之心初始数量" })
   public initialReviveHeartPowerUpCount = 0;
+
+  @property({ displayName: "正向罗盘初始数量" })
+  public initialNormalCompassPowerUpCount = 0;
+
+  @property({ displayName: "正向罗盘生效箭头数" })
+  public normalCompassForcedArrowCount = 10;
 
   @property({ displayName: "时间沙漏持续秒数" })
   public timeSlowDuration = 5;
@@ -222,6 +237,8 @@ export class ArrowGameController extends Component {
   private timeSlowRemainingSeconds = 0;
   private reviveHeartPowerUpCount = 0;
   private reviveProtectPromptNode: Node | null = null;
+  private normalCompassPowerUpCount = 0;
+  private normalCompassRemainingArrows = 0;
 
   onLoad() {
     this.isPaused = this.startPaused;
@@ -231,11 +248,16 @@ export class ArrowGameController extends Component {
     this.setupArrowDisplay();
     this.setupTimeSlowPowerUp();
     this.setupReviveHeartPowerUp();
+    this.setupNormalCompassPowerUp();
     this.reviveHeartPowerUpCount = this.clampPowerUpCount(
       this.initialReviveHeartPowerUpCount,
     );
+    this.normalCompassPowerUpCount = this.clampPowerUpCount(
+      this.initialNormalCompassPowerUpCount,
+    );
     this.updateTimeSlowPowerUpCountView();
     this.updateReviveHeartPowerUpCountView();
+    this.updateNormalCompassPowerUpCountView();
     this.updateComboLabel();
     this.updateScoreLabel();
     this.refreshRule();
@@ -258,6 +280,7 @@ export class ArrowGameController extends Component {
   onDisable() {
     this.unbindTimeSlowPowerUp();
     this.unbindReviveHeartPowerUp();
+    this.unbindNormalCompassPowerUp();
     this.stopArrowRefreshLoop();
     this.stopRunningFeedbackTweens();
   }
@@ -265,6 +288,7 @@ export class ArrowGameController extends Component {
   onDestroy() {
     this.unbindTimeSlowPowerUp();
     this.unbindReviveHeartPowerUp();
+    this.unbindNormalCompassPowerUp();
     this.stopArrowRefreshLoop();
     this.stopRunningFeedbackTweens();
   }
@@ -332,9 +356,11 @@ export class ArrowGameController extends Component {
     this.fastestReaction = Number.POSITIVE_INFINITY;
     this.resetSpeedUpState();
     this.timeSlowRemainingSeconds = 0;
+    this.normalCompassRemainingArrows = 0;
     this.isGameEnded = false;
     this.updateComboLabel();
     this.updateReviveHeartPowerUpCountView();
+    this.updateNormalCompassPowerUpCountView();
     this.stopScoreTweens();
     this.updateScoreLabel(0);
     this.lifeDisplay?.resetLives();
@@ -414,6 +440,18 @@ export class ArrowGameController extends Component {
   public setReviveHeartPowerUpCount(count: number) {
     this.reviveHeartPowerUpCount = this.clampPowerUpCount(count);
     this.updateReviveHeartPowerUpCountView();
+  }
+
+  public addNormalCompassPowerUp(amount = 1) {
+    this.normalCompassPowerUpCount = this.clampPowerUpCount(
+      this.normalCompassPowerUpCount + amount,
+    );
+    this.updateNormalCompassPowerUpCountView();
+  }
+
+  public setNormalCompassPowerUpCount(count: number) {
+    this.normalCompassPowerUpCount = this.clampPowerUpCount(count);
+    this.updateNormalCompassPowerUpCountView();
   }
 
   private handleCorrectClick(inputSource: DirectionInputSource = "button") {
@@ -873,6 +911,54 @@ export class ArrowGameController extends Component {
     );
   }
 
+  private setupNormalCompassPowerUp() {
+    if (!this.normalCompassPowerUpNode && this.autoFindNormalCompassPowerUp) {
+      this.normalCompassPowerUpNode = this.findNodeInChildren(
+        this.node,
+        "\u6b63\u5411\u7f57\u76d8",
+      );
+    }
+
+    if (!this.normalCompassCountSprite && this.normalCompassPowerUpNode) {
+      this.normalCompassCountSprite = this
+        .findNodeInChildren(this.normalCompassPowerUpNode, "\u6570\u91cf")
+        ?.getComponent(Sprite) ?? null;
+    }
+
+    if (!this.normalCompassPowerUpNode) {
+      return;
+    }
+
+    let button = this.normalCompassPowerUpNode.getComponent(Button);
+    if (!button) {
+      button = this.normalCompassPowerUpNode.addComponent(Button);
+      button.transition = Button.Transition.NONE;
+    }
+
+    this.normalCompassPowerUpNode.off(
+      Button.EventType.CLICK,
+      this.onNormalCompassPowerUpClicked,
+      this,
+    );
+    this.normalCompassPowerUpNode.on(
+      Button.EventType.CLICK,
+      this.onNormalCompassPowerUpClicked,
+      this,
+    );
+  }
+
+  private unbindNormalCompassPowerUp() {
+    if (!this.normalCompassPowerUpNode || !isValid(this.normalCompassPowerUpNode)) {
+      return;
+    }
+
+    this.normalCompassPowerUpNode.off(
+      Button.EventType.CLICK,
+      this.onNormalCompassPowerUpClicked,
+      this,
+    );
+  }
+
   private onTimeSlowPowerUpClicked() {
     if (this.isPaused || this.isGameEnded) {
       return;
@@ -899,6 +985,19 @@ export class ArrowGameController extends Component {
     this.playReviveProtectionPrompt("死亡时自动保护");
   }
 
+  private onNormalCompassPowerUpClicked() {
+    if (this.isPaused || this.isGameEnded) {
+      return;
+    }
+
+    if (this.normalCompassPowerUpCount <= 0) {
+      this.obtainNormalCompassPowerUp();
+      return;
+    }
+
+    this.useNormalCompassPowerUp();
+  }
+
   private obtainTimeSlowPowerUp() {
     this.timeSlowPowerUpCount = 1;
     this.updateTimeSlowPowerUpCountView();
@@ -906,6 +1005,10 @@ export class ArrowGameController extends Component {
 
   private obtainReviveHeartPowerUp() {
     this.addReviveHeartPowerUp(1);
+  }
+
+  private obtainNormalCompassPowerUp() {
+    this.addNormalCompassPowerUp(1);
   }
 
   private useTimeSlowPowerUp() {
@@ -916,6 +1019,19 @@ export class ArrowGameController extends Component {
       this.getCurrentSmoothArrowRefreshInterval(),
     );
     this.updateTimeSlowPowerUpCountView();
+  }
+
+  private useNormalCompassPowerUp() {
+    this.normalCompassPowerUpCount = Math.max(
+      0,
+      this.normalCompassPowerUpCount - 1,
+    );
+    this.normalCompassRemainingArrows = Math.max(
+      1,
+      Math.floor(this.normalCompassForcedArrowCount),
+    );
+    this.updateNormalCompassPowerUpCountView();
+    this.applyNormalCompassToCurrentQuestion();
   }
 
   private tryConsumeReviveHeartProtectionBeforeLifeLoss() {
@@ -980,6 +1096,37 @@ export class ArrowGameController extends Component {
     if (spriteFrame) {
       this.reviveHeartCountSprite.spriteFrame = spriteFrame;
     }
+  }
+
+  private updateNormalCompassPowerUpCountView() {
+    if (!this.normalCompassCountSprite || this.powerUpCountSpriteFrames.length === 0) {
+      return;
+    }
+
+    const frameIndex = Math.max(
+      0,
+      Math.min(
+        this.normalCompassPowerUpCount,
+        this.powerUpCountSpriteFrames.length - 1,
+      ),
+    );
+    const spriteFrame = this.powerUpCountSpriteFrames[frameIndex];
+    if (spriteFrame) {
+      this.normalCompassCountSprite.spriteFrame = spriteFrame;
+    }
+  }
+
+  private applyNormalCompassToCurrentQuestion() {
+    if (this.questionAnswered || this.normalCompassRemainingArrows <= 0) {
+      return;
+    }
+
+    this.currentRule = ArrowClickRule.Normal;
+    this.normalCompassRemainingArrows = Math.max(
+      0,
+      this.normalCompassRemainingArrows - 1,
+    );
+    this.updateRuleLabel();
   }
 
   private playReviveProtectionPrompt(message = this.reviveProtectMessage) {
@@ -1070,6 +1217,16 @@ export class ArrowGameController extends Component {
   }
 
   private refreshRule() {
+    if (this.normalCompassRemainingArrows > 0) {
+      this.currentRule = ArrowClickRule.Normal;
+      this.normalCompassRemainingArrows = Math.max(
+        0,
+        this.normalCompassRemainingArrows - 1,
+      );
+      this.updateRuleLabel();
+      return;
+    }
+
     this.currentRule =
       Math.random() < 0.5 ? ArrowClickRule.Normal : ArrowClickRule.Reverse;
     this.updateRuleLabel();
