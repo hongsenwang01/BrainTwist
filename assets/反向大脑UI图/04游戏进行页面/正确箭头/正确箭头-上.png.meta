@@ -11,7 +11,7 @@
     "6c48a": {
       "importer": "texture",
       "uuid": "f713ffea-d926-413a-9b80-142ce9983399@6c48a",
-      "displayName": "上边箭头png",
+      "displayName": "正确箭头-上",
       "id": "6c48a",
       "name": "texture",
       "userData": {
@@ -35,7 +35,7 @@
     "f9941": {
       "importer": "sprite-frame",
       "uuid": "f713ffea-d926-413a-9b80-142ce9983399@f9941",
-      "displayName": "上边箭头png",
+      "displayName": "正确箭头-上",
       "id": "f9941",
       "name": "spriteFrame",
       "userData": {

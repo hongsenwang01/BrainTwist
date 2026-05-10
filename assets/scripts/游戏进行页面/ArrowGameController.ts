@@ -55,15 +55,6 @@ export class ArrowGameController extends Component {
   @property({ type: Label, displayName: "分数文本" })
   public scoreLabel: Label | null = null;
 
-  @property({ type: Label, displayName: "属性提示文本" })
-  public ruleLabel: Label | null = null;
-
-  @property({ displayName: "正常提示文字" })
-  public normalRuleText = "正常";
-
-  @property({ displayName: "异常提示文字" })
-  public reverseRuleText = "异常";
-
   @property({ type: ComboShakeEffect, displayName: "连击震动效果" })
   public comboShakeEffect: ComboShakeEffect | null = null;
 
@@ -261,6 +252,7 @@ export class ArrowGameController extends Component {
     this.updateComboLabel();
     this.updateScoreLabel();
     this.refreshRule();
+    this.arrowDisplay?.showRandomArrow(false, false, this.shouldUseReverseArrowNodes());
     this.startRoundClock();
   }
 
@@ -268,7 +260,6 @@ export class ArrowGameController extends Component {
     this.setupArrowDisplay();
     this.updateComboLabel();
     this.updateScoreLabel();
-    this.updateRuleLabel();
     this.gameTimer?.setCompleteCallback(() => this.endGame());
     this.gameTimer?.restartTimer(this.totalGameSeconds);
     if (this.startPaused) {
@@ -699,8 +690,12 @@ export class ArrowGameController extends Component {
   }
 
   private refreshQuestion(animated: boolean) {
-    this.arrowDisplay?.showRandomArrow(true, animated);
     this.refreshRule();
+    this.arrowDisplay?.showRandomArrow(
+      true,
+      animated,
+      this.shouldUseReverseArrowNodes(),
+    );
     this.questionStartedAt = Date.now();
     this.questionAnswered = false;
   }
@@ -1126,7 +1121,7 @@ export class ArrowGameController extends Component {
       0,
       this.normalCompassRemainingArrows - 1,
     );
-    this.updateRuleLabel();
+    this.arrowDisplay?.refreshCurrentArrow(this.shouldUseReverseArrowNodes());
   }
 
   private playReviveProtectionPrompt(message = this.reviveProtectMessage) {
@@ -1223,24 +1218,15 @@ export class ArrowGameController extends Component {
         0,
         this.normalCompassRemainingArrows - 1,
       );
-      this.updateRuleLabel();
       return;
     }
 
     this.currentRule =
       Math.random() < 0.5 ? ArrowClickRule.Normal : ArrowClickRule.Reverse;
-    this.updateRuleLabel();
   }
 
-  private updateRuleLabel() {
-    if (!this.ruleLabel) {
-      return;
-    }
-
-    this.ruleLabel.string =
-      this.currentRule === ArrowClickRule.Normal
-        ? this.normalRuleText
-        : this.reverseRuleText;
+  private shouldUseReverseArrowNodes() {
+    return this.currentRule === ArrowClickRule.Reverse;
   }
 
   private getCorrectDirection(currentDirection: ArrowDirection) {
@@ -1252,11 +1238,15 @@ export class ArrowGameController extends Component {
   }
 
   private setupArrowDisplay() {
-    if (this.arrowDisplay || !this.autoFindArrowDisplay) {
+    if (!this.arrowDisplay && this.autoFindArrowDisplay) {
+      this.arrowDisplay = this.findArrowDisplayInChildren(this.node);
+    }
+
+    if (!this.arrowDisplay) {
       return;
     }
 
-    this.arrowDisplay = this.findArrowDisplayInChildren(this.node);
+    this.arrowDisplay.autoShowOnStart = false;
   }
 
   private findArrowDisplayInChildren(node: Node): RandomArrowDisplay | null {
