@@ -3,6 +3,7 @@ import {
   AudioClip,
   AudioSource,
   Button,
+  Color,
   Component,
   director,
   isValid,
@@ -12,6 +13,8 @@ import {
   SpriteFrame,
   Tween,
   tween,
+  UIOpacity,
+  UITransform,
   Vec2,
   Vec3,
   warn,
@@ -121,17 +124,50 @@ export class ArrowGameController extends Component {
   @property({ type: Sprite, displayName: "时间沙漏数量图片" })
   public timeSlowCountSprite: Sprite | null = null;
 
+  @property({ type: Node, displayName: "复活之心道具节点" })
+  public reviveHeartPowerUpNode: Node | null = null;
+
+  @property({ type: Sprite, displayName: "复活之心数量图片" })
+  public reviveHeartCountSprite: Sprite | null = null;
+
   @property({ type: [SpriteFrame], displayName: "道具数量数字图" })
   public powerUpCountSpriteFrames: SpriteFrame[] = [];
 
   @property({ displayName: "自动查找时间沙漏道具" })
   public autoFindTimeSlowPowerUp = true;
 
+  @property({ displayName: "自动查找复活之心道具" })
+  public autoFindReviveHeartPowerUp = true;
+
+  @property({ displayName: "复活之心初始数量" })
+  public initialReviveHeartPowerUpCount = 0;
+
   @property({ displayName: "时间沙漏持续秒数" })
   public timeSlowDuration = 5;
 
   @property({ displayName: "时间沙漏放缓倍率" })
   public timeSlowIntervalMultiplier = 1.6;
+
+  @property({ type: Node, displayName: "复活保护提示父节点" })
+  public reviveProtectPromptParent: Node | null = null;
+
+  @property({ displayName: "复活保护提示文字" })
+  public reviveProtectMessage = "保护生效";
+
+  @property({ displayName: "复活保护提示X" })
+  public reviveProtectPromptX = 0;
+
+  @property({ displayName: "复活保护提示Y" })
+  public reviveProtectPromptY = 150;
+
+  @property({ displayName: "复活保护提示字号" })
+  public reviveProtectFontSize = 48;
+
+  @property({ displayName: "复活保护提示行高" })
+  public reviveProtectLineHeight = 58;
+
+  @property({ type: Color, displayName: "复活保护提示颜色" })
+  public reviveProtectMessageColor = new Color(255, 98, 185, 255);
 
   @property({ displayName: "未操作扣生命" })
   public loseLifeOnMiss = true;
@@ -184,6 +220,8 @@ export class ArrowGameController extends Component {
   private autoRefreshElapsedSeconds = 0;
   private timeSlowPowerUpCount = 0;
   private timeSlowRemainingSeconds = 0;
+  private reviveHeartPowerUpCount = 0;
+  private reviveProtectPromptNode: Node | null = null;
 
   onLoad() {
     this.isPaused = this.startPaused;
@@ -192,7 +230,12 @@ export class ArrowGameController extends Component {
     this.cacheScoreLabelOriginScale();
     this.setupArrowDisplay();
     this.setupTimeSlowPowerUp();
+    this.setupReviveHeartPowerUp();
+    this.reviveHeartPowerUpCount = this.clampPowerUpCount(
+      this.initialReviveHeartPowerUpCount,
+    );
     this.updateTimeSlowPowerUpCountView();
+    this.updateReviveHeartPowerUpCountView();
     this.updateComboLabel();
     this.updateScoreLabel();
     this.refreshRule();
@@ -214,12 +257,14 @@ export class ArrowGameController extends Component {
 
   onDisable() {
     this.unbindTimeSlowPowerUp();
+    this.unbindReviveHeartPowerUp();
     this.stopArrowRefreshLoop();
     this.stopRunningFeedbackTweens();
   }
 
   onDestroy() {
     this.unbindTimeSlowPowerUp();
+    this.unbindReviveHeartPowerUp();
     this.stopArrowRefreshLoop();
     this.stopRunningFeedbackTweens();
   }
@@ -289,6 +334,7 @@ export class ArrowGameController extends Component {
     this.timeSlowRemainingSeconds = 0;
     this.isGameEnded = false;
     this.updateComboLabel();
+    this.updateReviveHeartPowerUpCountView();
     this.stopScoreTweens();
     this.updateScoreLabel(0);
     this.lifeDisplay?.resetLives();
@@ -358,6 +404,18 @@ export class ArrowGameController extends Component {
     }
   }
 
+  public addReviveHeartPowerUp(amount = 1) {
+    this.reviveHeartPowerUpCount = this.clampPowerUpCount(
+      this.reviveHeartPowerUpCount + amount,
+    );
+    this.updateReviveHeartPowerUpCountView();
+  }
+
+  public setReviveHeartPowerUpCount(count: number) {
+    this.reviveHeartPowerUpCount = this.clampPowerUpCount(count);
+    this.updateReviveHeartPowerUpCountView();
+  }
+
   private handleCorrectClick(inputSource: DirectionInputSource = "button") {
     this.questionAnswered = true;
     this.comboCount += 1;
@@ -396,6 +454,13 @@ export class ArrowGameController extends Component {
     const remainingLives = this.recordWrongAnswer();
 
     if (remainingLives === 0) {
+      if (this.tryConsumeReviveHeartProtection()) {
+        if (!this.autoRefreshArrow && this.refreshOnCorrectClick) {
+          this.refreshQuestion(true);
+        }
+        return;
+      }
+
       this.endGame();
       warn(
         `ArrowGameController: wrong direction ${ArrowDirection[clickedDirection]}, expected ${ArrowDirection[correctDirection]}.`,
@@ -422,6 +487,10 @@ export class ArrowGameController extends Component {
     const remainingLives = this.recordMissedAnswer();
 
     if (remainingLives === 0) {
+      if (this.tryConsumeReviveHeartProtection()) {
+        return;
+      }
+
       this.endGame();
     }
   }
@@ -431,6 +500,12 @@ export class ArrowGameController extends Component {
     this.wrongCount += 1;
     this.wrongInputCount += 1;
     this.updateComboLabel();
+
+    if (this.tryConsumeReviveHeartProtectionBeforeLifeLoss()) {
+      this.playWrongClickSound();
+      return this.lifeDisplay?.getCurrentLives();
+    }
+
     const remainingLives = this.lifeDisplay?.loseLife();
     this.playWrongClickSound();
     return remainingLives;
@@ -444,6 +519,11 @@ export class ArrowGameController extends Component {
 
     if (!this.loseLifeOnMiss) {
       return undefined;
+    }
+
+    if (this.tryConsumeReviveHeartProtectionBeforeLifeLoss()) {
+      this.playWrongClickSound();
+      return this.lifeDisplay?.getCurrentLives();
     }
 
     const remainingLives = this.lifeDisplay?.loseLife();
@@ -549,6 +629,7 @@ export class ArrowGameController extends Component {
   private stopRunningFeedbackTweens() {
     this.stopScoreTweens();
     this.scoreGainPopup?.stopAll();
+    this.stopReviveProtectionPrompt();
   }
 
   private cacheScoreLabelOriginScale() {
@@ -687,6 +768,18 @@ export class ArrowGameController extends Component {
     return Math.max(0, Math.min(1, value));
   }
 
+  private clampPowerUpCount(count: number) {
+    if (!Number.isFinite(count)) {
+      return 0;
+    }
+
+    const maxCount =
+      this.powerUpCountSpriteFrames.length > 0
+        ? Math.max(0, this.powerUpCountSpriteFrames.length - 1)
+        : 99;
+    return Math.max(0, Math.min(maxCount, Math.floor(count)));
+  }
+
   private setupTimeSlowPowerUp() {
     if (!this.timeSlowPowerUpNode && this.autoFindTimeSlowPowerUp) {
       this.timeSlowPowerUpNode = this.findNodeInChildren(this.node, "时间沙漏");
@@ -732,6 +825,54 @@ export class ArrowGameController extends Component {
     );
   }
 
+  private setupReviveHeartPowerUp() {
+    if (!this.reviveHeartPowerUpNode && this.autoFindReviveHeartPowerUp) {
+      this.reviveHeartPowerUpNode = this.findNodeInChildren(
+        this.node,
+        "\u590d\u6d3b\u4e4b\u5fc3",
+      );
+    }
+
+    if (!this.reviveHeartCountSprite && this.reviveHeartPowerUpNode) {
+      this.reviveHeartCountSprite = this
+        .findNodeInChildren(this.reviveHeartPowerUpNode, "\u6570\u91cf")
+        ?.getComponent(Sprite) ?? null;
+    }
+
+    if (!this.reviveHeartPowerUpNode) {
+      return;
+    }
+
+    let button = this.reviveHeartPowerUpNode.getComponent(Button);
+    if (!button) {
+      button = this.reviveHeartPowerUpNode.addComponent(Button);
+      button.transition = Button.Transition.NONE;
+    }
+
+    this.reviveHeartPowerUpNode.off(
+      Button.EventType.CLICK,
+      this.onReviveHeartPowerUpClicked,
+      this,
+    );
+    this.reviveHeartPowerUpNode.on(
+      Button.EventType.CLICK,
+      this.onReviveHeartPowerUpClicked,
+      this,
+    );
+  }
+
+  private unbindReviveHeartPowerUp() {
+    if (!this.reviveHeartPowerUpNode || !isValid(this.reviveHeartPowerUpNode)) {
+      return;
+    }
+
+    this.reviveHeartPowerUpNode.off(
+      Button.EventType.CLICK,
+      this.onReviveHeartPowerUpClicked,
+      this,
+    );
+  }
+
   private onTimeSlowPowerUpClicked() {
     if (this.isPaused || this.isGameEnded) {
       return;
@@ -745,9 +886,26 @@ export class ArrowGameController extends Component {
     this.useTimeSlowPowerUp();
   }
 
+  private onReviveHeartPowerUpClicked() {
+    if (this.isPaused || this.isGameEnded) {
+      return;
+    }
+
+    if (this.reviveHeartPowerUpCount <= 0) {
+      this.obtainReviveHeartPowerUp();
+      return;
+    }
+
+    this.playReviveProtectionPrompt("死亡时自动保护");
+  }
+
   private obtainTimeSlowPowerUp() {
     this.timeSlowPowerUpCount = 1;
     this.updateTimeSlowPowerUpCountView();
+  }
+
+  private obtainReviveHeartPowerUp() {
+    this.addReviveHeartPowerUp(1);
   }
 
   private useTimeSlowPowerUp() {
@@ -758,6 +916,29 @@ export class ArrowGameController extends Component {
       this.getCurrentSmoothArrowRefreshInterval(),
     );
     this.updateTimeSlowPowerUpCountView();
+  }
+
+  private tryConsumeReviveHeartProtectionBeforeLifeLoss() {
+    if (!this.lifeDisplay || this.lifeDisplay.getCurrentLives() > 1) {
+      return false;
+    }
+
+    return this.tryConsumeReviveHeartProtection(false);
+  }
+
+  private tryConsumeReviveHeartProtection(restoreLife = true) {
+    if (this.reviveHeartPowerUpCount <= 0 || !this.lifeDisplay) {
+      return false;
+    }
+
+    this.reviveHeartPowerUpCount = Math.max(0, this.reviveHeartPowerUpCount - 1);
+    this.updateReviveHeartPowerUpCountView();
+    if (restoreLife || this.lifeDisplay.getCurrentLives() <= 0) {
+      this.lifeDisplay.restoreLife(1);
+    }
+    this.playReviveProtectionPrompt(this.reviveProtectMessage);
+    this.bottomGlowParticleEmitter?.playBurst(1.2);
+    return true;
   }
 
   private updateTimeSlowPowerUp(deltaTime: number) {
@@ -784,6 +965,93 @@ export class ArrowGameController extends Component {
     if (spriteFrame) {
       this.timeSlowCountSprite.spriteFrame = spriteFrame;
     }
+  }
+
+  private updateReviveHeartPowerUpCountView() {
+    if (!this.reviveHeartCountSprite || this.powerUpCountSpriteFrames.length === 0) {
+      return;
+    }
+
+    const frameIndex = Math.max(
+      0,
+      Math.min(this.reviveHeartPowerUpCount, this.powerUpCountSpriteFrames.length - 1),
+    );
+    const spriteFrame = this.powerUpCountSpriteFrames[frameIndex];
+    if (spriteFrame) {
+      this.reviveHeartCountSprite.spriteFrame = spriteFrame;
+    }
+  }
+
+  private playReviveProtectionPrompt(message = this.reviveProtectMessage) {
+    this.stopReviveProtectionPrompt();
+
+    const promptNode = new Node("复活保护提示");
+    promptNode.parent = this.reviveProtectPromptParent ?? this.node;
+    promptNode.setPosition(this.reviveProtectPromptX, this.reviveProtectPromptY, 0);
+    promptNode.setScale(0.82, 0.82, 1);
+    promptNode.setSiblingIndex(promptNode.parent.children.length - 1);
+
+    const transform = promptNode.addComponent(UITransform);
+    transform.setContentSize(320, this.reviveProtectLineHeight);
+
+    const label = promptNode.addComponent(Label);
+    label.string = message || "保护生效";
+    label.fontSize = this.reviveProtectFontSize;
+    label.lineHeight = this.reviveProtectLineHeight;
+    label.color = new Color(
+      this.reviveProtectMessageColor.r,
+      this.reviveProtectMessageColor.g,
+      this.reviveProtectMessageColor.b,
+      this.reviveProtectMessageColor.a,
+    );
+    label.horizontalAlign = Label.HorizontalAlign.CENTER;
+    label.verticalAlign = Label.VerticalAlign.CENTER;
+    label.isBold = true;
+    label.enableWrapText = false;
+
+    const opacity = promptNode.addComponent(UIOpacity);
+    opacity.opacity = 0;
+    this.reviveProtectPromptNode = promptNode;
+
+    tween(opacity)
+      .to(0.12, { opacity: 255 }, { easing: "sineOut" })
+      .delay(0.72)
+      .to(0.28, { opacity: 0 }, { easing: "sineIn" })
+      .start();
+
+    tween(promptNode)
+      .to(0.12, { scale: new Vec3(1.18, 1.18, 1) }, { easing: "backOut" })
+      .to(0.1, { scale: new Vec3(1, 1, 1) }, { easing: "sineOut" })
+      .delay(0.62)
+      .to(
+        0.28,
+        {
+          position: new Vec3(
+            this.reviveProtectPromptX,
+            this.reviveProtectPromptY + 44,
+            0,
+          ),
+        },
+        { easing: "sineIn" },
+      )
+      .call(() => this.stopReviveProtectionPrompt())
+      .start();
+  }
+
+  private stopReviveProtectionPrompt() {
+    const promptNode = this.reviveProtectPromptNode;
+    if (!promptNode || !isValid(promptNode, true)) {
+      this.reviveProtectPromptNode = null;
+      return;
+    }
+
+    const opacity = promptNode.getComponent(UIOpacity);
+    if (opacity) {
+      Tween.stopAllByTarget(opacity);
+    }
+    Tween.stopAllByTarget(promptNode);
+    promptNode.destroy();
+    this.reviveProtectPromptNode = null;
   }
 
   private findNodeInChildren(node: Node, nodeName: string): Node | null {

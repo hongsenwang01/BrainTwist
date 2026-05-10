@@ -85,6 +85,19 @@ export class LifeDisplay extends Component {
     return this.currentLives;
   }
 
+  public restoreLife(amount = 1) {
+    const previousLives = this.currentLives;
+    this.currentLives = this.clampLives(this.currentLives + amount);
+    this.resetHeartTransforms();
+    this.refresh();
+
+    if (this.currentLives > previousLives) {
+      this.playRestoreHeartEffect(this.currentLives - 1);
+    }
+
+    return this.currentLives;
+  }
+
   public getCurrentLives() {
     return this.currentLives;
   }
@@ -186,6 +199,44 @@ export class LifeDisplay extends Component {
       .call(() => {
         sprite.spriteFrame = this.emptyHeart;
         node.setPosition(originalPosition);
+        node.setScale(originalScale);
+        opacity.opacity = 255;
+      })
+      .start();
+  }
+
+  private playRestoreHeartEffect(index: number) {
+    const sprite = this.heartSprites[index];
+    if (!sprite) {
+      return;
+    }
+
+    const node = sprite.node;
+    const opacity = this.getOrCreateOpacity(node);
+    const originalScale = this.originalScales[index] ?? node.scale.clone();
+    const popScale = new Vec3(
+      originalScale.x * this.popScale,
+      originalScale.y * this.popScale,
+      originalScale.z,
+    );
+
+    tween(node).stop();
+    tween(opacity).stop();
+
+    sprite.spriteFrame = this.fullHeart;
+    node.setScale(
+      originalScale.x * this.loseShrinkScale,
+      originalScale.y * this.loseShrinkScale,
+      originalScale.z,
+    );
+    opacity.opacity = 0;
+
+    tween(opacity).to(this.popInDuration, { opacity: 255 }).start();
+
+    tween(node)
+      .to(this.popInDuration, { scale: popScale }, { easing: "backOut" })
+      .to(this.settleDuration, { scale: originalScale }, { easing: "sineOut" })
+      .call(() => {
         node.setScale(originalScale);
         opacity.opacity = 255;
       })
