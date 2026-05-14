@@ -150,6 +150,13 @@ export class RandomArrowDisplay extends Component {
     return this.currentDirection;
   }
 
+  public hideArrows() {
+    tween(this.node).stop();
+    this.isAnimating = false;
+    this.node.setPosition(this.originPosition);
+    this.hideAllArrowNodes();
+  }
+
   private getAvailableOptions(useReverseArrowNodes = false): ArrowNodeOption[] {
     return [
       ArrowDirection.Up,

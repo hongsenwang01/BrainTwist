@@ -76,6 +76,24 @@ export class ArrowGameController extends Component {
   @property({ type: PauseOverlay, displayName: "暂停弹窗" })
   public pauseOverlay: PauseOverlay | null = null;
 
+  @property({ type: Label, displayName: "开局倒计时文本" })
+  public preStartCountdownLabel: Label | null = null;
+
+  @property({ type: Node, displayName: "开局倒计时父节点" })
+  public preStartCountdownParent: Node | null = null;
+
+  @property({ type: Node, displayName: "倒计时3节点" })
+  public preStartCountdownThreeNode: Node | null = null;
+
+  @property({ type: Node, displayName: "倒计时2节点" })
+  public preStartCountdownTwoNode: Node | null = null;
+
+  @property({ type: Node, displayName: "倒计时1节点" })
+  public preStartCountdownOneNode: Node | null = null;
+
+  @property({ type: Node, displayName: "倒计时GO节点" })
+  public preStartCountdownGoNode: Node | null = null;
+
   @property({ type: AudioClip, displayName: "错误点击音效" })
   public wrongClickSound: AudioClip | null = null;
 
@@ -181,6 +199,18 @@ export class ArrowGameController extends Component {
   @property({ displayName: "开始时暂停" })
   public startPaused = false;
 
+  @property({ displayName: "启用开局倒计时" })
+  public enablePreStartCountdown = true;
+
+  @property({ displayName: "开局倒计时秒数" })
+  public preStartCountdownSeconds = 3;
+
+  @property({ displayName: "GO显示秒数" })
+  public preStartGoDuration = 0.45;
+
+  @property({ displayName: "开局倒计时字号" })
+  public preStartCountdownFontSize = 108;
+
   @property({ displayName: "首页场景名" })
   public homeSceneName = "游戏首页";
 
@@ -219,6 +249,8 @@ export class ArrowGameController extends Component {
   private questionStartedAt = 0;
   private gameStartedAt = 0;
   private questionAnswered = false;
+  private isPreStartCountingDown = false;
+  private preStartCountdownRunId = 0;
   private scoreTweenState = { value: 0 };
   private scoreLabelOriginScale = new Vec3(1, 1, 1);
   private currentArrowRefreshInterval = 2;
@@ -252,20 +284,16 @@ export class ArrowGameController extends Component {
     this.updateComboLabel();
     this.updateScoreLabel();
     this.refreshRule();
-    this.arrowDisplay?.showRandomArrow(false, false, this.shouldUseReverseArrowNodes());
-    this.startRoundClock();
+    this.setupPreStartCountdownLabel();
   }
 
   start() {
     this.setupArrowDisplay();
+    this.setupPreStartCountdownLabel();
     this.updateComboLabel();
     this.updateScoreLabel();
     this.gameTimer?.setCompleteCallback(() => this.endGame());
-    this.gameTimer?.restartTimer(this.totalGameSeconds);
-    if (this.startPaused) {
-      this.gameTimer?.pauseTimer();
-    }
-    this.startArrowRefreshLoop();
+    this.startPreStartFlow(true);
   }
 
   onDisable() {
@@ -274,6 +302,7 @@ export class ArrowGameController extends Component {
     this.unbindNormalCompassPowerUp();
     this.stopArrowRefreshLoop();
     this.stopRunningFeedbackTweens();
+    this.preStartCountdownRunId += 1;
   }
 
   onDestroy() {
@@ -282,6 +311,7 @@ export class ArrowGameController extends Component {
     this.unbindNormalCompassPowerUp();
     this.stopArrowRefreshLoop();
     this.stopRunningFeedbackTweens();
+    this.preStartCountdownRunId += 1;
   }
 
   update(deltaTime: number) {
@@ -310,6 +340,10 @@ export class ArrowGameController extends Component {
   }
 
   public pauseGame() {
+    if (this.isPreStartCountingDown) {
+      return;
+    }
+
     this.isPaused = true;
     this.stopArrowRefreshLoop();
     this.gameTimer?.pauseTimer();
@@ -317,6 +351,10 @@ export class ArrowGameController extends Component {
   }
 
   public resumeGame() {
+    if (this.isPreStartCountingDown) {
+      return;
+    }
+
     this.isPaused = false;
     this.startArrowRefreshLoop();
     this.gameTimer?.startTimer();
@@ -324,6 +362,10 @@ export class ArrowGameController extends Component {
   }
 
   public togglePause() {
+    if (this.isPreStartCountingDown) {
+      return;
+    }
+
     if (this.pauseOverlay?.isShowing()) {
       this.resumeGame();
       return;
@@ -356,11 +398,8 @@ export class ArrowGameController extends Component {
     this.updateScoreLabel(0);
     this.lifeDisplay?.resetLives();
     this.comboMotivationPrompt?.resetTriggers();
-    this.refreshQuestion(false);
-    this.startRoundClock();
-    this.gameTimer?.restartTimer(this.totalGameSeconds);
-    this.resumeGame();
-    this.startArrowRefreshLoop();
+    this.pauseOverlay?.hide();
+    this.startPreStartFlow(true);
   }
 
   public backToHome() {
@@ -698,6 +737,241 @@ export class ArrowGameController extends Component {
     );
     this.questionStartedAt = Date.now();
     this.questionAnswered = false;
+  }
+
+  private startPreStartFlow(firstArrowAnimated: boolean) {
+    this.preStartCountdownRunId += 1;
+    this.stopArrowRefreshLoop();
+    this.stopRunningFeedbackTweens();
+    this.arrowDisplay?.hideArrows();
+    this.isGameEnded = false;
+    this.isPaused = true;
+    this.isPreStartCountingDown = false;
+    this.gameTimer?.pauseTimer();
+    this.gameTimer?.resetTimer(this.totalGameSeconds);
+
+    if (this.startPaused) {
+      this.hidePreStartCountdownLabel();
+      return;
+    }
+
+    if (!this.enablePreStartCountdown) {
+      this.startActiveRound(firstArrowAnimated);
+      return;
+    }
+
+    this.isPreStartCountingDown = true;
+    this.runPreStartCountdownStep(
+      this.preStartCountdownRunId,
+      Math.max(1, Math.floor(this.preStartCountdownSeconds)),
+      firstArrowAnimated,
+    );
+  }
+
+  private runPreStartCountdownStep(
+    runId: number,
+    count: number,
+    firstArrowAnimated: boolean,
+  ) {
+    if (runId !== this.preStartCountdownRunId || this.isGameEnded) {
+      return;
+    }
+
+    if (count <= 0) {
+      this.playPreStartCountdownText("GO", this.preStartGoDuration, () => {
+        if (runId !== this.preStartCountdownRunId || this.isGameEnded) {
+          return;
+        }
+        this.startActiveRound(firstArrowAnimated);
+      });
+      return;
+    }
+
+    this.playPreStartCountdownText(`${count}`, 0.82, () => {
+      this.runPreStartCountdownStep(runId, count - 1, firstArrowAnimated);
+    });
+  }
+
+  private startActiveRound(firstArrowAnimated: boolean) {
+    this.isPreStartCountingDown = false;
+    this.isPaused = false;
+    this.hidePreStartCountdownLabel();
+    this.startRoundClock();
+    this.refreshQuestion(firstArrowAnimated);
+    this.gameTimer?.startTimer();
+    this.startArrowRefreshLoop();
+  }
+
+  private setupPreStartCountdownLabel() {
+    if (this.hasPreStartCountdownVisualNodes()) {
+      this.hidePreStartCountdownVisualNodes();
+      return;
+    }
+
+    if (this.preStartCountdownLabel) {
+      this.preStartCountdownLabel.node.active = false;
+      return;
+    }
+
+    const parent = this.preStartCountdownParent ?? this.node;
+    const labelNode = new Node("开局倒计时");
+    labelNode.layer = parent.layer;
+    labelNode.parent = parent;
+    labelNode.setPosition(0, 90, 0);
+    labelNode.setSiblingIndex(parent.children.length - 1);
+
+    const transform = labelNode.addComponent(UITransform);
+    transform.setContentSize(360, 180);
+
+    const label = labelNode.addComponent(Label);
+    label.horizontalAlign = Label.HorizontalAlign.CENTER;
+    label.verticalAlign = Label.VerticalAlign.CENTER;
+    label.fontSize = this.preStartCountdownFontSize;
+    label.lineHeight = Math.ceil(this.preStartCountdownFontSize * 1.15);
+    label.isBold = true;
+    label.overflow = Label.Overflow.SHRINK;
+    label.color = new Color(255, 244, 105, 255);
+
+    labelNode.addComponent(UIOpacity).opacity = 0;
+    labelNode.active = false;
+    this.preStartCountdownLabel = label;
+  }
+
+  private playPreStartCountdownText(
+    text: string,
+    durationSeconds: number,
+    onComplete: () => void,
+  ) {
+    const visualNode = this.getPreStartCountdownVisualNode(text);
+    if (visualNode) {
+      this.playPreStartCountdownNode(visualNode, durationSeconds, onComplete);
+      return;
+    }
+
+    this.setupPreStartCountdownLabel();
+    const label = this.preStartCountdownLabel;
+    if (!label) {
+      onComplete();
+      return;
+    }
+
+    const labelNode = label.node;
+    const opacity = labelNode.getComponent(UIOpacity) ?? labelNode.addComponent(UIOpacity);
+    const safeDuration = Math.max(0.1, durationSeconds);
+    label.string = text;
+    labelNode.active = true;
+    labelNode.setSiblingIndex(labelNode.parent ? labelNode.parent.children.length - 1 : 0);
+    labelNode.setScale(0.72, 0.72, 1);
+    opacity.opacity = 0;
+    Tween.stopAllByTarget(labelNode);
+    Tween.stopAllByTarget(opacity);
+
+    tween(opacity)
+      .to(0.12, { opacity: 255 })
+      .delay(Math.max(0, safeDuration - 0.24))
+      .to(0.12, { opacity: 0 })
+      .start();
+
+    tween(labelNode)
+      .to(0.14, { scale: new Vec3(1.18, 1.18, 1) })
+      .to(0.12, { scale: new Vec3(1, 1, 1) })
+      .delay(Math.max(0, safeDuration - 0.26))
+      .call(onComplete)
+      .start();
+  }
+
+  private playPreStartCountdownNode(
+    targetNode: Node,
+    durationSeconds: number,
+    onComplete: () => void,
+  ) {
+    this.hidePreStartCountdownVisualNodes(targetNode);
+
+    const opacity = targetNode.getComponent(UIOpacity) ?? targetNode.addComponent(UIOpacity);
+    const safeDuration = Math.max(0.1, durationSeconds);
+    targetNode.active = true;
+    targetNode.setSiblingIndex(targetNode.parent ? targetNode.parent.children.length - 1 : 0);
+    targetNode.setScale(0.72, 0.72, 1);
+    opacity.opacity = 0;
+    Tween.stopAllByTarget(targetNode);
+    Tween.stopAllByTarget(opacity);
+
+    tween(opacity)
+      .to(0.12, { opacity: 255 })
+      .delay(Math.max(0, safeDuration - 0.24))
+      .to(0.12, { opacity: 0 })
+      .start();
+
+    tween(targetNode)
+      .to(0.14, { scale: new Vec3(1.18, 1.18, 1) })
+      .to(0.12, { scale: new Vec3(1, 1, 1) })
+      .delay(Math.max(0, safeDuration - 0.26))
+      .call(() => {
+        targetNode.active = false;
+        onComplete();
+      })
+      .start();
+  }
+
+  private hidePreStartCountdownLabel() {
+    this.hidePreStartCountdownVisualNodes();
+
+    if (!this.preStartCountdownLabel) {
+      return;
+    }
+
+    const labelNode = this.preStartCountdownLabel.node;
+    Tween.stopAllByTarget(labelNode);
+    const opacity = labelNode.getComponent(UIOpacity);
+    if (opacity) {
+      Tween.stopAllByTarget(opacity);
+      opacity.opacity = 0;
+    }
+    labelNode.active = false;
+  }
+
+  private hasPreStartCountdownVisualNodes() {
+    return this.getPreStartCountdownVisualNodes().length > 0;
+  }
+
+  private getPreStartCountdownVisualNode(text: string) {
+    switch (text) {
+      case "3":
+        return this.preStartCountdownThreeNode;
+      case "2":
+        return this.preStartCountdownTwoNode;
+      case "1":
+        return this.preStartCountdownOneNode;
+      case "GO":
+        return this.preStartCountdownGoNode;
+      default:
+        return null;
+    }
+  }
+
+  private getPreStartCountdownVisualNodes() {
+    return [
+      this.preStartCountdownThreeNode,
+      this.preStartCountdownTwoNode,
+      this.preStartCountdownOneNode,
+      this.preStartCountdownGoNode,
+    ].filter((node): node is Node => Boolean(node));
+  }
+
+  private hidePreStartCountdownVisualNodes(exceptNode: Node | null = null) {
+    this.getPreStartCountdownVisualNodes().forEach((node) => {
+      if (node === exceptNode) {
+        return;
+      }
+
+      Tween.stopAllByTarget(node);
+      const opacity = node.getComponent(UIOpacity);
+      if (opacity) {
+        Tween.stopAllByTarget(opacity);
+        opacity.opacity = 0;
+      }
+      node.active = false;
+    });
   }
 
   private startArrowRefreshLoop() {

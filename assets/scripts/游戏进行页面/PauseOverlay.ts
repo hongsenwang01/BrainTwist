@@ -51,7 +51,7 @@ export class PauseOverlay extends Component {
   onLoad() {
     this.setup();
 
-    if (this.hideOnLoad) {
+    if (this.hideOnLoad && !this.isVisible) {
       this.isVisible = false;
       this.node.active = false;
     }
