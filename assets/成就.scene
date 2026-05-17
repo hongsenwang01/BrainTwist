@@ -4246,7 +4246,7 @@
     "_enabled": true,
     "__prefab": null,
     "autoLoadRemoteAchievements": true,
-    "backendBaseUrl": "http://localhost:3000",
+    "backendBaseUrl": "http://localhost:8000",
     "achievementListApiPath": "/api/achievements",
     "gameKey": "reverse_brain",
     "gameMode": "classic",

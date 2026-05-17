@@ -1,15 +1,22 @@
 import {
   _decorator,
   assetManager,
+  Button,
+  Color,
   Component,
+  Graphics,
   ImageAsset,
   Label,
+  Node,
   Sprite,
   SpriteFrame,
   sys,
   Texture2D,
+  UITransform,
+  Vec3,
   warn,
 } from "cc";
+import { ApiService } from "../工具/ApiService";
 
 const { ccclass, property } = _decorator;
 
@@ -67,7 +74,19 @@ export class HomeUserProfile extends Component {
   public useCachedProfileFirst = true;
 
   @property({ displayName: "后端服务地址" })
-  public backendBaseUrl = "http://localhost:3000";
+  public backendBaseUrl = "http://localhost:8000";
+
+  @property({ displayName: "云服务公网地址(可选)" })
+  public cloudBackendBaseUrl = "";
+
+  @property({ displayName: "抖音云EnvID" })
+  public cloudEnvId = "env-5WR869esJh";
+
+  @property({ displayName: "抖音云ServiceID" })
+  public cloudServiceId = "1m1m8q7pj63uu";
+
+  @property({ displayName: "显示接口环境切换" })
+  public showApiModeSwitch = true;
 
   @property({ displayName: "用户资料接口路径" })
   public userProfileApiPath = "/api/auth/profile";
@@ -100,10 +119,19 @@ export class HomeUserProfile extends Component {
   public loginFailedText = "登录失败";
 
   private currentAvatarUrl = "";
+  private apiModeSwitchNode: Node | null = null;
+  private apiModeSwitchLabel: Label | null = null;
 
   start() {
     this.avatarSprite = this.avatarSprite ?? this.node.getComponentInChildren(Sprite);
     this.nicknameLabel = this.nicknameLabel ?? this.node.getComponentInChildren(Label);
+    ApiService.configure({
+      localBaseUrl: this.backendBaseUrl,
+      cloudBaseUrl: this.cloudBackendBaseUrl,
+      cloudEnvId: this.cloudEnvId,
+      cloudServiceId: this.cloudServiceId,
+    });
+    this.createApiModeSwitch();
 
     if (this.useCachedProfileFirst) {
       this.applyProfile(this.readCachedProfile());
@@ -151,22 +179,13 @@ export class HomeUserProfile extends Component {
     }
 
     try {
-      const response = await fetch(this.createProfileUrl(userId), {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
+      const result = await ApiService.requestJson<UserProfileResponse>(
+        this.userProfileApiPath,
+        {
+          method: "GET",
+          query: { userId },
         },
-      });
-
-      if (!response.ok) {
-        warn(`HomeUserProfile: profile request failed, status ${response.status}.`);
-        if (!shouldLoginAsGuest) {
-          this.setLoginStatus(this.loginFailedText);
-        }
-        return;
-      }
-
-      const result = (await response.json()) as UserProfileResponse;
+      );
       if (result.code !== 0 || !result.data) {
         warn(`HomeUserProfile: profile request failed, ${result.message ?? "unknown error"}.`);
         if (!shouldLoginAsGuest) {
@@ -194,13 +213,13 @@ export class HomeUserProfile extends Component {
 
   private async loginAsGuest() {
     try {
-      const response = await fetch(this.createLoginUrl(), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          code: this.getOrCreateGuestCode(),
+      const guestCode = this.getOrCreateGuestCode();
+      const result = await ApiService.requestJson<GuestLoginResponse>(
+        this.loginApiPath,
+        {
+          method: "POST",
+          body: {
+          code: guestCode,
           userInfo: {
             nickName: this.guestNickname,
             avatarUrl: "",
@@ -212,15 +231,9 @@ export class HomeUserProfile extends Component {
           },
           appId: this.appId,
           clientVersion: this.clientVersion,
-        }),
-      });
-
-      if (!response.ok) {
-        warn(`HomeUserProfile: guest login failed, status ${response.status}.`);
-        return null;
-      }
-
-      const result = (await response.json()) as GuestLoginResponse;
+          },
+        },
+      );
       if (result.code !== 0 || !result.data) {
         warn(`HomeUserProfile: guest login failed, ${result.message ?? "unknown error"}.`);
         return null;
@@ -333,22 +346,6 @@ export class HomeUserProfile extends Component {
     }
   }
 
-  private createProfileUrl(userId: string) {
-    const baseUrl = this.backendBaseUrl.replace(/\/+$/, "");
-    const path = this.userProfileApiPath.startsWith("/")
-      ? this.userProfileApiPath
-      : `/${this.userProfileApiPath}`;
-    return `${baseUrl}${path}?userId=${encodeURIComponent(userId)}`;
-  }
-
-  private createLoginUrl() {
-    const baseUrl = this.backendBaseUrl.replace(/\/+$/, "");
-    const path = this.loginApiPath.startsWith("/")
-      ? this.loginApiPath
-      : `/${this.loginApiPath}`;
-    return `${baseUrl}${path}`;
-  }
-
   private getOrCreateGuestCode() {
     const storageKey = "brain_twist_guest_code";
     const existingCode = sys.localStorage.getItem(storageKey);
@@ -377,5 +374,76 @@ export class HomeUserProfile extends Component {
       avatarUrl: profile.avatarUrl ?? profile.avatar ?? profile.avatar_url,
       isGuest: profile.isGuest,
     };
+  }
+
+  private createApiModeSwitch() {
+    if (!this.showApiModeSwitch || this.apiModeSwitchNode) {
+      return;
+    }
+
+    const buttonWidth = 176;
+    const buttonHeight = 48;
+    const buttonNode = new Node("Api Mode Switch");
+    buttonNode.parent = this.node;
+    buttonNode.layer = this.node.layer;
+    buttonNode.setPosition(new Vec3(595, 1218, 0));
+
+    const transform = buttonNode.addComponent(UITransform);
+    transform.setContentSize(buttonWidth, buttonHeight);
+
+    const graphics = buttonNode.addComponent(Graphics);
+    const button = buttonNode.addComponent(Button);
+    button.transition = Button.Transition.NONE;
+    buttonNode.on(Button.EventType.CLICK, this.onApiModeSwitchClicked, this);
+
+    const labelNode = new Node("Api Mode Label");
+    labelNode.parent = buttonNode;
+    labelNode.layer = this.node.layer;
+    labelNode.setPosition(new Vec3(0, 0, 0));
+    const labelTransform = labelNode.addComponent(UITransform);
+    labelTransform.setContentSize(buttonWidth, buttonHeight);
+    const label = labelNode.addComponent(Label);
+    label.fontSize = 22;
+    label.lineHeight = 28;
+    label.color = new Color(255, 255, 255, 255);
+    label.horizontalAlign = Label.HorizontalAlign.CENTER;
+    label.verticalAlign = Label.VerticalAlign.CENTER;
+
+    this.apiModeSwitchNode = buttonNode;
+    this.apiModeSwitchLabel = label;
+    this.updateApiModeSwitch(graphics);
+  }
+
+  private onApiModeSwitchClicked() {
+    ApiService.toggleMode();
+    this.clearCachedLoginForApiModeChange();
+    this.updateApiModeSwitch();
+    this.applyGuestProfile();
+    void this.fetchProfile();
+  }
+
+  private updateApiModeSwitch(graphics = this.apiModeSwitchNode?.getComponent(Graphics)) {
+    const mode = ApiService.getMode();
+    if (graphics) {
+      graphics.clear();
+      graphics.fillColor =
+        mode === "local"
+          ? new Color(36, 130, 255, 230)
+          : new Color(22, 171, 120, 230);
+      graphics.rect(-88, -24, 176, 48);
+      graphics.fill();
+    }
+
+    if (this.apiModeSwitchLabel) {
+      this.apiModeSwitchLabel.string = `接口: ${ApiService.getModeDisplayName()}`;
+    }
+  }
+
+  private clearCachedLoginForApiModeChange() {
+    sys.localStorage.removeItem(this.userIdStorageKey);
+    sys.localStorage.removeItem(this.userInfoStorageKey);
+    sys.localStorage.removeItem("brain_twist_best_score_cache_v1");
+    sys.localStorage.removeItem("brain_twist_achievement_cache_v2");
+    sys.localStorage.setItem("brain_twist_achievement_cache_dirty", "1");
   }
 }

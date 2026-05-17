@@ -1,4 +1,5 @@
 import { _decorator, Component, director, Label, sys, warn } from "cc";
+import { ApiService } from "../工具/ApiService";
 
 const { ccclass, property } = _decorator;
 
@@ -38,7 +39,7 @@ export class LoadingPercentLabel extends Component {
   public guestLoginOnStart = true;
 
   @property({ displayName: "后端服务地址" })
-  public backendBaseUrl = "http://localhost:3000";
+  public backendBaseUrl = "http://localhost:8000";
 
   @property({ displayName: "登录接口路径" })
   public loginApiPath = "/api/auth/douyin-login";
@@ -68,6 +69,9 @@ export class LoadingPercentLabel extends Component {
     }
 
     this.isStarting = true;
+    ApiService.configure({
+      localBaseUrl: this.backendBaseUrl,
+    });
 
     if (this.guestLoginOnStart) {
       const loginSuccess = await this.loginAsGuest();
@@ -157,37 +161,29 @@ export class LoadingPercentLabel extends Component {
   }
 
   private async loginAsGuest() {
-    const url = this.createLoginUrl();
     const guestCode = this.getOrCreateGuestCode();
 
     try {
-      const response = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          code: guestCode,
-          userInfo: {
-            nickName: "游客",
-            avatarUrl: "",
-            gender: 0,
-            country: "",
-            province: "",
-            city: "",
-            language: "zh_CN",
+      const result = await ApiService.requestJson<GuestLoginResponse>(
+        this.loginApiPath,
+        {
+          method: "POST",
+          body: {
+            code: guestCode,
+            userInfo: {
+              nickName: "游客",
+              avatarUrl: "",
+              gender: 0,
+              country: "",
+              province: "",
+              city: "",
+              language: "zh_CN",
+            },
+            appId: this.appId,
+            clientVersion: this.clientVersion,
           },
-          appId: this.appId,
-          clientVersion: this.clientVersion,
-        }),
-      });
-
-      if (!response.ok) {
-        warn(`LoadingPercentLabel: guest login failed, status ${response.status}.`);
-        return false;
-      }
-
-      const result = (await response.json()) as GuestLoginResponse;
+        },
+      );
       if (result.code !== 0 || !result.data) {
         warn(`LoadingPercentLabel: guest login failed, ${result.message ?? "unknown error"}.`);
         return false;
@@ -199,14 +195,6 @@ export class LoadingPercentLabel extends Component {
       warn(`LoadingPercentLabel: guest login request failed, ${String(error)}.`);
       return false;
     }
-  }
-
-  private createLoginUrl() {
-    const baseUrl = this.backendBaseUrl.replace(/\/+$/, "");
-    const path = this.loginApiPath.startsWith("/")
-      ? this.loginApiPath
-      : `/${this.loginApiPath}`;
-    return `${baseUrl}${path}`;
   }
 
   private getOrCreateGuestCode() {

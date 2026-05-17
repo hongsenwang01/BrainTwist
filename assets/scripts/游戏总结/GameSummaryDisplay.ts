@@ -1,5 +1,6 @@
 import { _decorator, Component, Label, sys, warn } from "cc";
 import { GameResultData, GameResultStore } from "../工具/GameResultStore";
+import { ApiService } from "../工具/ApiService";
 import { ScoreCountUpLabel } from "./ScoreCountUpLabel";
 
 const { ccclass, property } = _decorator;
@@ -70,7 +71,7 @@ export class GameSummaryDisplay extends Component {
   public autoUploadScore = true;
 
   @property({ displayName: "后端服务地址" })
-  public backendBaseUrl = "http://localhost:3000";
+  public backendBaseUrl = "http://localhost:8000";
 
   @property({ displayName: "提交成绩接口路径" })
   public submitScoreApiPath = "/api/game-scores/submit";
@@ -95,6 +96,9 @@ export class GameSummaryDisplay extends Component {
 
   start() {
     const result = GameResultStore.getResult();
+    ApiService.configure({
+      localBaseUrl: this.backendBaseUrl,
+    });
     this.prepareLabelsForLoading();
     void this.loadSummaryDataThenRender(result);
   }
@@ -178,6 +182,7 @@ export class GameSummaryDisplay extends Component {
 
   private async uploadScore(result: GameResultData) {
     if (this.hasUploadedScore) {
+      warn("GameSummaryDisplay: score upload already triggered, skip duplicate upload.");
       return null;
     }
 
@@ -190,20 +195,17 @@ export class GameSummaryDisplay extends Component {
     }
 
     try {
-      const response = await fetch(this.createSubmitScoreUrl(), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      const payload = this.createSubmitScorePayload(userId, result);
+      warn(
+        `GameSummaryDisplay: uploading score ${payload.score} for user ${userId}.`,
+      );
+      const uploadResult = await ApiService.requestJson<SubmitScoreResponse>(
+        this.submitScoreApiPath,
+        {
+          method: "POST",
+          body: payload,
         },
-        body: JSON.stringify(this.createSubmitScorePayload(userId, result)),
-      });
-
-      if (!response.ok) {
-        warn(`GameSummaryDisplay: score upload failed, status ${response.status}.`);
-        return null;
-      }
-
-      const uploadResult = (await response.json()) as SubmitScoreResponse;
+      );
       if (uploadResult.code !== 0 || !uploadResult.data) {
         warn(
           `GameSummaryDisplay: score upload failed, ${
@@ -213,6 +215,11 @@ export class GameSummaryDisplay extends Component {
         return null;
       }
 
+      warn(
+        `GameSummaryDisplay: score upload success, bestScore ${
+          uploadResult.data.bestScore ?? "unknown"
+        }.`,
+      );
       sys.localStorage.setItem(ACHIEVEMENT_CACHE_DIRTY_KEY, "1");
 
       if (typeof uploadResult.data.bestScore === "number") {
@@ -243,6 +250,8 @@ export class GameSummaryDisplay extends Component {
       if (typeof uploadedBestScore === "number") {
         historyBestScore = Math.max(historyBestScore, uploadedBestScore);
       }
+    } else {
+      warn("GameSummaryDisplay: autoUploadScore is disabled.");
     }
 
     this.render(result, historyBestScore);
@@ -250,19 +259,18 @@ export class GameSummaryDisplay extends Component {
 
   private async loadHistoryBestScoreBeforeSubmit(userId: string) {
     try {
-      const response = await fetch(this.createBestScoreUrl(userId), {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
+      const result = await ApiService.requestJson<BestScoreResponse>(
+        this.bestScoreApiPath,
+        {
+          method: "GET",
+          query: {
+            userId,
+            gameKey: this.gameKey,
+            gameMode: this.gameMode,
+            difficulty: this.difficulty,
+          },
         },
-      });
-
-      if (!response.ok) {
-        warn(`GameSummaryDisplay: best score request failed, status ${response.status}.`);
-        return null;
-      }
-
-      const result = (await response.json()) as BestScoreResponse;
+      );
       if (result.code !== 0 || !result.data || typeof result.data.bestScore !== "number") {
         warn(`GameSummaryDisplay: best score request failed, ${result.message ?? "unknown error"}.`);
         return null;
@@ -364,28 +372,6 @@ export class GameSummaryDisplay extends Component {
     return typeof cachedBestScore === "number"
       ? Math.max(cachedBestScore, result.historyBestScore)
       : Math.max(0, Math.floor(result.historyBestScore));
-  }
-
-  private createSubmitScoreUrl() {
-    const baseUrl = this.backendBaseUrl.replace(/\/+$/, "");
-    const path = this.submitScoreApiPath.startsWith("/")
-      ? this.submitScoreApiPath
-      : `/${this.submitScoreApiPath}`;
-    return `${baseUrl}${path}`;
-  }
-
-  private createBestScoreUrl(userId: string) {
-    const baseUrl = this.backendBaseUrl.replace(/\/+$/, "");
-    const path = this.bestScoreApiPath.startsWith("/")
-      ? this.bestScoreApiPath
-      : `/${this.bestScoreApiPath}`;
-    const query = [
-      `userId=${encodeURIComponent(userId)}`,
-      `gameKey=${encodeURIComponent(this.gameKey)}`,
-      `gameMode=${encodeURIComponent(this.gameMode)}`,
-      `difficulty=${encodeURIComponent(this.difficulty)}`,
-    ].join("&");
-    return `${baseUrl}${path}?${query}`;
   }
 
   private createDeviceInfo() {

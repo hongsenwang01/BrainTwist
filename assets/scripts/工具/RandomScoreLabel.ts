@@ -1,4 +1,5 @@
 import { _decorator, Component, Label, sys, warn } from "cc";
+import { ApiService } from "./ApiService";
 
 const { ccclass, property } = _decorator;
 
@@ -35,7 +36,7 @@ export class RandomScoreLabel extends Component {
   public fetchBestScoreOnStart = false;
 
   @property({ displayName: "后端服务地址" })
-  public backendBaseUrl = "http://localhost:3000";
+  public backendBaseUrl = "http://localhost:8000";
 
   @property({ displayName: "最高分接口路径" })
   public bestScoreApiPath = "/api/game-scores/best";
@@ -54,6 +55,9 @@ export class RandomScoreLabel extends Component {
 
   start() {
     this.targetLabel = this.targetLabel ?? this.node.getComponent(Label);
+    ApiService.configure({
+      localBaseUrl: this.backendBaseUrl,
+    });
 
     if (this.fetchBestScoreOnStart) {
       this.showCachedBestScore();
@@ -106,19 +110,17 @@ export class RandomScoreLabel extends Component {
     }
 
     try {
-      const response = await fetch(this.createBestScoreUrl(userId), {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
+      const result = await ApiService.requestJson<BestScoreResponse>(
+        this.bestScoreApiPath,
+        {
+          method: "GET",
+          query: {
+            userId,
+            gameKey: this.gameKey,
+            gameMode: this.gameMode,
+          },
         },
-      });
-
-      if (!response.ok) {
-        warn(`RandomScoreLabel: best score request failed, status ${response.status}.`);
-        return;
-      }
-
-      const result = (await response.json()) as BestScoreResponse;
+      );
       if (result.code !== 0 || !result.data || typeof result.data.bestScore !== "number") {
         warn(`RandomScoreLabel: best score request failed, ${result.message ?? "unknown error"}.`);
         return;
@@ -180,19 +182,6 @@ export class RandomScoreLabel extends Component {
     };
 
     sys.localStorage.setItem(BEST_SCORE_CACHE_KEY, JSON.stringify(cache));
-  }
-
-  private createBestScoreUrl(userId: string) {
-    const baseUrl = this.backendBaseUrl.replace(/\/+$/, "");
-    const path = this.bestScoreApiPath.startsWith("/")
-      ? this.bestScoreApiPath
-      : `/${this.bestScoreApiPath}`;
-    const query = [
-      `userId=${encodeURIComponent(userId)}`,
-      `gameKey=${encodeURIComponent(this.gameKey)}`,
-      `gameMode=${encodeURIComponent(this.gameMode)}`,
-    ].join("&");
-    return `${baseUrl}${path}?${query}`;
   }
 
   private formatScore(score: number) {

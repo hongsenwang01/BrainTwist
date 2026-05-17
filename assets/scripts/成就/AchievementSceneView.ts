@@ -16,6 +16,7 @@ import {
   sys,
   warn,
 } from "cc";
+import { ApiService } from "../工具/ApiService";
 
 const { ccclass, property } = _decorator;
 
@@ -136,7 +137,7 @@ export class AchievementSceneView extends Component {
   public autoLoadRemoteAchievements = true;
 
   @property({ displayName: "后端服务地址" })
-  public backendBaseUrl = "http://localhost:3000";
+  public backendBaseUrl = "http://localhost:8000";
 
   @property({ displayName: "成就列表接口路径" })
   public achievementListApiPath = "/api/achievements";
@@ -168,6 +169,9 @@ export class AchievementSceneView extends Component {
 
   start() {
     this.prepareSceneTemplates();
+    ApiService.configure({
+      localBaseUrl: this.backendBaseUrl,
+    });
     this.prepareListView();
     this.bindTabs();
     this.bindBackButton();
@@ -600,20 +604,17 @@ export class AchievementSceneView extends Component {
     }
 
     try {
-      const response = await fetch(this.createAchievementListUrl(userId), {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
+      const result = await ApiService.requestJson<AchievementListResponse>(
+        this.achievementListApiPath,
+        {
+          method: "GET",
+          query: {
+            userId,
+            gameKey: this.gameKey,
+            gameMode: this.gameMode,
+          },
         },
-      });
-
-      if (!response.ok) {
-        warn(`AchievementSceneView: achievement list request failed, status ${response.status}.`);
-        this.handleLoadFailure();
-        return;
-      }
-
-      const result = (await response.json()) as AchievementListResponse;
+      );
       if (result.code !== 0 || !result.data) {
         warn(`AchievementSceneView: achievement list request failed, ${result.message ?? "unknown error"}.`);
         this.handleLoadFailure();
@@ -688,19 +689,6 @@ export class AchievementSceneView extends Component {
   private toNumber(value: unknown, fallback: number) {
     const numberValue = Number(value);
     return Number.isFinite(numberValue) ? numberValue : fallback;
-  }
-
-  private createAchievementListUrl(userId: string) {
-    const baseUrl = this.backendBaseUrl.replace(/\/+$/, "");
-    const path = this.achievementListApiPath.startsWith("/")
-      ? this.achievementListApiPath
-      : `/${this.achievementListApiPath}`;
-    const query = [
-      `userId=${encodeURIComponent(userId)}`,
-      `gameKey=${encodeURIComponent(this.gameKey)}`,
-      `gameMode=${encodeURIComponent(this.gameMode)}`,
-    ].join("&");
-    return `${baseUrl}${path}?${query}`;
   }
 
   private findNode(name: string, root = this.node): Node | null {

@@ -734,7 +734,7 @@
     "maxScore": 5000,
     "randomizeOnStart": true,
     "fetchBestScoreOnStart": false,
-    "backendBaseUrl": "http://localhost:3000",
+    "backendBaseUrl": "http://localhost:8000",
     "bestScoreApiPath": "/api/game-scores/best",
     "gameKey": "reverse_brain",
     "gameMode": "classic",
