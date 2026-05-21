@@ -21,10 +21,32 @@ type DouyinLoginResult = {
   anonymous_code?: string;
 };
 
+type DouyinUserInfo = {
+  nickName?: string;
+  nickname?: string;
+  name?: string;
+  avatarUrl?: string;
+  avatar?: string;
+  gender?: number;
+  country?: string;
+  province?: string;
+  city?: string;
+  language?: string;
+};
+
+type DouyinUserInfoResult = {
+  userInfo?: DouyinUserInfo;
+};
+
 type DouyinApi = {
   login?: (options: {
     force?: boolean;
     success?: (result: DouyinLoginResult) => void;
+    fail?: (error: unknown) => void;
+  }) => void;
+  getUserInfo?: (options: {
+    withCredentials?: boolean;
+    success?: (result: DouyinUserInfoResult) => void;
     fail?: (error: unknown) => void;
   }) => void;
 };
@@ -63,6 +85,9 @@ export class LoadingPercentLabel extends Component {
 
   @property({ displayName: "抖音强制登录" })
   public forceDouyinLogin = true;
+
+  @property({ displayName: "请求用户信息授权" })
+  public requestDouyinUserInfo = true;
 
   @property({ displayName: "非抖音环境允许游客" })
   public allowDevGuestLogin = true;
@@ -188,7 +213,14 @@ export class LoadingPercentLabel extends Component {
         return false;
       }
 
-      return this.loginWithDouyinCode(douyinLogin);
+      const userInfo = this.requestDouyinUserInfo
+        ? await this.tryGetDouyinUserInfo(tt)
+        : undefined;
+      if (this.requestDouyinUserInfo && !userInfo) {
+        return false;
+      }
+
+      return this.loginWithDouyinCode(douyinLogin, userInfo);
     }
 
     if (!this.allowDevGuestLogin) {
@@ -221,18 +253,50 @@ export class LoadingPercentLabel extends Component {
     }
   }
 
-  private async loginWithDouyinCode(loginResult: DouyinLoginResult) {
+  private async tryGetDouyinUserInfo(tt: DouyinApi) {
+    if (typeof tt.getUserInfo !== "function") {
+      warn("LoadingPercentLabel: Douyin getUserInfo is unavailable.");
+      return null;
+    }
+
     try {
+      const result = await new Promise<DouyinUserInfoResult>((resolve, reject) => {
+        tt.getUserInfo?.({
+          withCredentials: true,
+          success: resolve,
+          fail: reject,
+        });
+      });
+
+      if (!result.userInfo) {
+        warn("LoadingPercentLabel: Douyin getUserInfo returned empty userInfo.");
+        return null;
+      }
+
+      return result.userInfo;
+    } catch (error) {
+      warn(`LoadingPercentLabel: Douyin getUserInfo failed, ${String(error)}.`);
+      return null;
+    }
+  }
+
+  private async loginWithDouyinCode(
+    loginResult: DouyinLoginResult,
+    userInfo?: DouyinUserInfo,
+  ) {
+    try {
+      const requestBody = {
+        code: loginResult.code,
+        anonymousCode: loginResult.anonymousCode ?? loginResult.anonymous_code ?? "",
+        userInfo: this.normalizeDouyinUserInfo(userInfo),
+        appId: this.appId,
+        clientVersion: this.clientVersion,
+      };
       const result = await ApiService.requestJson<GuestLoginResponse>(
         this.loginApiPath,
         {
           method: "POST",
-          body: {
-            code: loginResult.code,
-            anonymousCode: loginResult.anonymousCode ?? loginResult.anonymous_code ?? "",
-            appId: this.appId,
-            clientVersion: this.clientVersion,
-          },
+          body: requestBody,
         },
       );
       if (result.code !== 0 || !result.data) {
@@ -310,5 +374,21 @@ export class LoadingPercentLabel extends Component {
   private saveLoginData(data: NonNullable<GuestLoginResponse["data"]>) {
     sys.localStorage.setItem("brain_twist_user_id", data.userId);
     sys.localStorage.setItem("brain_twist_user_info", JSON.stringify(data));
+  }
+
+  private normalizeDouyinUserInfo(userInfo?: DouyinUserInfo) {
+    if (!userInfo) {
+      return undefined;
+    }
+
+    return {
+      nickName: userInfo.nickName ?? userInfo.nickname ?? userInfo.name ?? "玩家",
+      avatarUrl: userInfo.avatarUrl ?? userInfo.avatar ?? "",
+      gender: userInfo.gender ?? 0,
+      country: userInfo.country ?? "",
+      province: userInfo.province ?? "",
+      city: userInfo.city ?? "",
+      language: userInfo.language ?? "zh_CN",
+    };
   }
 }

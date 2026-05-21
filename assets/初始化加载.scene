@@ -465,6 +465,7 @@
     "loginApiPath": "/api/auth/douyin-login",
     "appId": "",
     "forceDouyinLogin": true,
+    "requestDouyinUserInfo": true,
     "allowDevGuestLogin": true,
     "clientVersion": "dev",
     "continueWhenLoginFailed": true,

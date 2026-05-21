@@ -12,6 +12,22 @@ type ApiRequestOptions = {
   timeoutMs?: number;
 };
 
+type MiniGameRequestResponse = {
+  statusCode?: number;
+  data?: unknown;
+};
+
+type MiniGameApi = {
+  request?: (options: {
+    url: string;
+    method?: string;
+    header?: Record<string, string>;
+    data?: unknown;
+    success?: (response: MiniGameRequestResponse) => void;
+    fail?: (error: unknown) => void;
+  }) => void;
+};
+
 const STORAGE_KEY = "brain_twist_api_service_config_v1";
 const DEFAULT_BASE_URL = "http://localhost:8000";
 
@@ -75,18 +91,69 @@ async function fetchJson<T>(
   path: string,
   options: ApiRequestOptions,
 ) {
-  const response = await fetch(`${baseUrl.replace(/\/+$/, "")}${path}`, {
-    method: options.method ?? "GET",
-    headers: createHeaders(options.headers),
-    body: createFetchBody(options.body),
-  });
+  const url = `${baseUrl.replace(/\/+$/, "")}${path}`;
+  const method = options.method ?? "GET";
+  const headers = createHeaders(options.headers);
 
-  const data = await parseResponseData(response.text());
+  const response = typeof fetch === "function"
+    ? await requestWithFetch(url, method, headers, options.body)
+    : await requestWithMiniGameApi(url, method, headers, options.body);
+  const data = parseMaybeJson(response.data);
+
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}: ${stringifyErrorData(data)}`);
   }
 
   return data as T;
+}
+
+async function requestWithFetch(
+  url: string,
+  method: ApiRequestOptions["method"],
+  headers: Record<string, string>,
+  body: unknown,
+) {
+  const response = await fetch(url, {
+    method,
+    headers,
+    body: createFetchBody(body),
+  });
+
+  return {
+    status: response.status,
+    ok: response.ok,
+    data: await parseResponseData(response.text()),
+  };
+}
+
+async function requestWithMiniGameApi(
+  url: string,
+  method: ApiRequestOptions["method"],
+  headers: Record<string, string>,
+  body: unknown,
+) {
+  const tt = (globalThis as unknown as { tt?: MiniGameApi }).tt;
+  if (typeof tt?.request !== "function") {
+    throw new Error("Neither fetch nor tt.request is available");
+  }
+
+  return new Promise<{ status: number; ok: boolean; data: unknown }>((resolve, reject) => {
+    tt.request?.({
+      url,
+      method,
+      header: headers,
+      data: body,
+      success: (response) => {
+        const status = Number(response.statusCode ?? 0);
+        resolve({
+          status,
+          ok: status >= 200 && status < 300,
+          data: response.data,
+        });
+      },
+      fail: reject,
+    });
+  });
 }
 
 function createHeaders(headers: Record<string, string> = {}) {

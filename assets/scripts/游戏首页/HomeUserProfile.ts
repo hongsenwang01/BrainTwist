@@ -4,15 +4,20 @@ import {
   Component,
   ImageAsset,
   Label,
+  Mask,
+  Node,
   Sprite,
   SpriteFrame,
   sys,
   Texture2D,
+  UITransform,
   warn,
 } from "cc";
 import { ApiService } from "../工具/ApiService";
 
 const { ccclass, property } = _decorator;
+const AVATAR_SIZE = 80;
+const ROUNDED_AVATAR_NODE_NAME = "圆形头像图片";
 
 type UserProfile = {
   userId?: string;
@@ -79,6 +84,7 @@ export class HomeUserProfile extends Component {
   start() {
     this.avatarSprite = this.avatarSprite ?? this.node.getComponentInChildren(Sprite);
     this.nicknameLabel = this.nicknameLabel ?? this.node.getComponentInChildren(Label);
+    this.ensureRoundedAvatarMask();
 
     if (this.useCachedProfileFirst) {
       this.applyProfile(this.readCachedProfile());
@@ -165,6 +171,7 @@ export class HomeUserProfile extends Component {
 
     const index = Math.floor(Math.random() * this.guestAvatarFrames.length);
     this.avatarSprite.spriteFrame = this.guestAvatarFrames[index];
+    this.fitAvatarSprite();
   }
 
   private loadRemoteAvatar(avatarUrl: string) {
@@ -190,6 +197,7 @@ export class HomeUserProfile extends Component {
         const spriteFrame = new SpriteFrame();
         spriteFrame.texture = texture;
         this.avatarSprite!.spriteFrame = spriteFrame;
+        this.fitAvatarSprite();
       },
     );
   }
@@ -236,5 +244,51 @@ export class HomeUserProfile extends Component {
       avatarUrl: profile.avatarUrl ?? profile.avatar ?? profile.avatar_url,
       isGuest: profile.isGuest,
     };
+  }
+
+  private ensureRoundedAvatarMask() {
+    if (!this.avatarSprite) {
+      return;
+    }
+
+    const hostNode = this.avatarSprite.node;
+    const originalSprite = this.avatarSprite;
+    const hostTransform = hostNode.getComponent(UITransform);
+    if (hostTransform) {
+      hostTransform.setContentSize(AVATAR_SIZE, AVATAR_SIZE);
+    }
+
+    const mask = hostNode.getComponent(Mask) ?? hostNode.addComponent(Mask);
+    mask.type = Mask.Type.GRAPHICS_ELLIPSE;
+    mask.segments = 48;
+
+    let avatarNode = hostNode.getChildByName(ROUNDED_AVATAR_NODE_NAME);
+    if (!avatarNode) {
+      avatarNode = new Node(ROUNDED_AVATAR_NODE_NAME);
+      avatarNode.layer = hostNode.layer;
+      hostNode.addChild(avatarNode);
+      avatarNode.setPosition(0, 0, 0);
+    }
+
+    const avatarTransform = avatarNode.getComponent(UITransform) ?? avatarNode.addComponent(UITransform);
+    avatarTransform.setContentSize(AVATAR_SIZE, AVATAR_SIZE);
+
+    const roundedSprite = avatarNode.getComponent(Sprite) ?? avatarNode.addComponent(Sprite);
+    roundedSprite.sizeMode = Sprite.SizeMode.CUSTOM;
+    roundedSprite.spriteFrame = originalSprite.spriteFrame;
+
+    originalSprite.enabled = false;
+    this.avatarSprite = roundedSprite;
+    this.fitAvatarSprite();
+  }
+
+  private fitAvatarSprite() {
+    if (!this.avatarSprite) {
+      return;
+    }
+
+    this.avatarSprite.sizeMode = Sprite.SizeMode.CUSTOM;
+    const transform = this.avatarSprite.node.getComponent(UITransform);
+    transform?.setContentSize(AVATAR_SIZE, AVATAR_SIZE);
   }
 }
