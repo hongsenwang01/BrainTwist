@@ -70,9 +70,6 @@ export class GameSummaryDisplay extends Component {
   @property({ displayName: "自动上传成绩" })
   public autoUploadScore = true;
 
-  @property({ displayName: "后端服务地址" })
-  public backendBaseUrl = "http://localhost:8000";
-
   @property({ displayName: "提交成绩接口路径" })
   public submitScoreApiPath = "/api/game-scores/submit";
 
@@ -96,9 +93,6 @@ export class GameSummaryDisplay extends Component {
 
   start() {
     const result = GameResultStore.getResult();
-    ApiService.configure({
-      localBaseUrl: this.backendBaseUrl,
-    });
     this.prepareLabelsForLoading();
     void this.loadSummaryDataThenRender(result);
   }

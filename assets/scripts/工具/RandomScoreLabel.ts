@@ -35,9 +35,6 @@ export class RandomScoreLabel extends Component {
   @property({ displayName: "接口获取最高分" })
   public fetchBestScoreOnStart = false;
 
-  @property({ displayName: "后端服务地址" })
-  public backendBaseUrl = "http://localhost:8000";
-
   @property({ displayName: "最高分接口路径" })
   public bestScoreApiPath = "/api/game-scores/best";
 
@@ -55,9 +52,6 @@ export class RandomScoreLabel extends Component {
 
   start() {
     this.targetLabel = this.targetLabel ?? this.node.getComponent(Label);
-    ApiService.configure({
-      localBaseUrl: this.backendBaseUrl,
-    });
 
     if (this.fetchBestScoreOnStart) {
       this.showCachedBestScore();

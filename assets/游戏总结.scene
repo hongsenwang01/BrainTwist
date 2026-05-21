@@ -13617,7 +13617,6 @@
     "scoreCountUpStartDelay": 0.35,
     "historyScoreExtraDelay": 0.12,
     "autoUploadScore": true,
-    "backendBaseUrl": "http://localhost:8000",
     "submitScoreApiPath": "/api/game-scores/submit",
     "bestScoreApiPath": "/api/game-scores/best",
     "gameKey": "reverse_brain",

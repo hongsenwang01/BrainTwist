@@ -34,6 +34,7 @@ import { ScoreGainPopup } from "./ScoreGainPopup";
 import { GameResultStore } from "../工具/GameResultStore";
 import { TextLetterSpacing } from "../工具/TextLetterSpacing";
 import { GameSettings } from "../设置/GameSettings";
+import { DouyinRewardedVideoAd } from "../工具/DouyinRewardedVideoAd";
 
 const { ccclass, property } = _decorator;
 
@@ -43,6 +44,7 @@ enum ArrowClickRule {
 }
 
 type DirectionInputSource = "button" | "swipe";
+type PowerUpRewardKind = "timeSlow" | "reviveHeart" | "normalCompass";
 
 @ccclass("ArrowGameController")
 export class ArrowGameController extends Component {
@@ -172,6 +174,15 @@ export class ArrowGameController extends Component {
   @property({ displayName: "时间沙漏放缓倍率" })
   public timeSlowIntervalMultiplier = 1.6;
 
+  @property({ displayName: "激励视频广告位ID" })
+  public rewardedVideoAdUnitId = "";
+
+  @property({ displayName: "启用道具激励视频" })
+  public enablePowerUpRewardedVideo = true;
+
+  @property({ displayName: "编辑器模拟广告成功" })
+  public editorMockRewardedVideoSuccess = true;
+
   @property({ type: Node, displayName: "复活保护提示父节点" })
   public reviveProtectPromptParent: Node | null = null;
 
@@ -221,7 +232,7 @@ export class ArrowGameController extends Component {
   public loadSummarySceneOnEnd = true;
 
   @property({ displayName: "分数滚动时长" })
-  public scoreRollDuration = 0.28;
+  public scoreRollDuration = 0.16;
 
   @property({ displayName: "分数弹出缩放" })
   public scorePopScale = 1.16;
@@ -231,6 +242,18 @@ export class ArrowGameController extends Component {
 
   @property({ displayName: "分数回缩时间" })
   public scorePopOutDuration = 0.12;
+
+  @property({ displayName: "基础正确分" })
+  public baseCorrectScore = 100;
+
+  @property({ displayName: "连击递增起点" })
+  public comboScoreGrowthStart = 10;
+
+  @property({ displayName: "连击递增步长" })
+  public comboScoreGrowthStep = 10;
+
+  @property({ displayName: "单次最高加分" })
+  public maxScoreIncrement = 600;
 
   private comboCount = 0;
   private score = 0;
@@ -262,6 +285,10 @@ export class ArrowGameController extends Component {
   private reviveProtectPromptNode: Node | null = null;
   private normalCompassPowerUpCount = 0;
   private normalCompassRemainingArrows = 0;
+  private powerUpRewardedVideoAd: DouyinRewardedVideoAd | null = null;
+  private powerUpRewardedVideoAdUnitId = "";
+  private powerUpRewardedVideoMockSuccess = false;
+  private isPowerUpRewardAdShowing = false;
 
   onLoad() {
     this.isPaused = this.startPaused;
@@ -311,6 +338,8 @@ export class ArrowGameController extends Component {
     this.unbindNormalCompassPowerUp();
     this.stopArrowRefreshLoop();
     this.stopRunningFeedbackTweens();
+    this.powerUpRewardedVideoAd?.destroy();
+    this.powerUpRewardedVideoAd = null;
     this.preStartCountdownRunId += 1;
   }
 
@@ -707,19 +736,17 @@ export class ArrowGameController extends Component {
   }
 
   private getScoreIncrement(comboCount: number) {
-    if (comboCount >= 50) {
-      return 5;
+    const baseScore = Math.max(0, Math.floor(this.baseCorrectScore));
+    const growthStart = Math.max(1, Math.floor(this.comboScoreGrowthStart));
+    const growthStep = Math.max(0, Math.floor(this.comboScoreGrowthStep));
+    const maxIncrement = Math.max(baseScore, Math.floor(this.maxScoreIncrement));
+
+    if (comboCount < growthStart) {
+      return baseScore;
     }
 
-    if (comboCount >= 20) {
-      return 3;
-    }
-
-    if (comboCount >= 10) {
-      return 2;
-    }
-
-    return 1;
+    const grownScore = baseScore + (comboCount - growthStart + 1) * growthStep;
+    return Math.min(maxIncrement, grownScore);
   }
 
   private formatScore(score: number) {
@@ -1228,43 +1255,128 @@ export class ArrowGameController extends Component {
     );
   }
 
-  private onTimeSlowPowerUpClicked() {
+  private async onTimeSlowPowerUpClicked() {
     if (this.isPaused || this.isGameEnded) {
       return;
     }
 
     if (this.timeSlowPowerUpCount <= 0) {
-      this.obtainTimeSlowPowerUp();
+      await this.obtainPowerUpWithRewardVideo("timeSlow");
       return;
     }
 
     this.useTimeSlowPowerUp();
   }
 
-  private onReviveHeartPowerUpClicked() {
+  private async onReviveHeartPowerUpClicked() {
     if (this.isPaused || this.isGameEnded) {
       return;
     }
 
     if (this.reviveHeartPowerUpCount <= 0) {
-      this.obtainReviveHeartPowerUp();
+      await this.obtainPowerUpWithRewardVideo("reviveHeart");
       return;
     }
 
     this.playReviveProtectionPrompt("死亡时自动保护");
   }
 
-  private onNormalCompassPowerUpClicked() {
+  private async onNormalCompassPowerUpClicked() {
     if (this.isPaused || this.isGameEnded) {
       return;
     }
 
     if (this.normalCompassPowerUpCount <= 0) {
-      this.obtainNormalCompassPowerUp();
+      await this.obtainPowerUpWithRewardVideo("normalCompass");
       return;
     }
 
     this.useNormalCompassPowerUp();
+  }
+
+  private async obtainPowerUpWithRewardVideo(kind: PowerUpRewardKind) {
+    if (!this.enablePowerUpRewardedVideo) {
+      this.obtainPowerUp(kind);
+      return;
+    }
+
+    if (this.isPowerUpRewardAdShowing) {
+      return;
+    }
+
+    this.isPowerUpRewardAdShowing = true;
+    this.pauseForRewardedVideo();
+
+    try {
+      const watchedToEnd = await this.getPowerUpRewardedVideoAd().show();
+      if (watchedToEnd && !this.isGameEnded && isValid(this.node)) {
+        this.obtainPowerUp(kind);
+      } else if (!watchedToEnd) {
+        warn(
+          "ArrowGameController: rewarded video was not completed.",
+          this.powerUpRewardedVideoAd?.getLastError() ?? "",
+        );
+      }
+    } finally {
+      this.isPowerUpRewardAdShowing = false;
+      this.resumeAfterRewardedVideo();
+    }
+  }
+
+  private obtainPowerUp(kind: PowerUpRewardKind) {
+    switch (kind) {
+      case "timeSlow":
+        this.obtainTimeSlowPowerUp();
+        break;
+      case "reviveHeart":
+        this.obtainReviveHeartPowerUp();
+        break;
+      case "normalCompass":
+        this.obtainNormalCompassPowerUp();
+        break;
+    }
+  }
+
+  private getPowerUpRewardedVideoAd() {
+    const adUnitId = this.rewardedVideoAdUnitId.trim();
+    const mockSuccess = Boolean(this.editorMockRewardedVideoSuccess);
+
+    if (
+      !this.powerUpRewardedVideoAd ||
+      this.powerUpRewardedVideoAdUnitId !== adUnitId ||
+      this.powerUpRewardedVideoMockSuccess !== mockSuccess
+    ) {
+      this.powerUpRewardedVideoAd?.destroy();
+      this.powerUpRewardedVideoAd = new DouyinRewardedVideoAd({
+        adUnitId,
+        mockSuccess,
+      });
+      this.powerUpRewardedVideoAdUnitId = adUnitId;
+      this.powerUpRewardedVideoMockSuccess = mockSuccess;
+    }
+
+    return this.powerUpRewardedVideoAd;
+  }
+
+  private pauseForRewardedVideo() {
+    this.isPaused = true;
+    this.stopArrowRefreshLoop();
+    this.gameTimer?.pauseTimer();
+  }
+
+  private resumeAfterRewardedVideo() {
+    if (
+      !isValid(this.node) ||
+      this.isGameEnded ||
+      this.isPreStartCountingDown ||
+      this.pauseOverlay?.isShowing()
+    ) {
+      return;
+    }
+
+    this.isPaused = false;
+    this.gameTimer?.startTimer();
+    this.startArrowRefreshLoop();
   }
 
   private obtainTimeSlowPowerUp() {

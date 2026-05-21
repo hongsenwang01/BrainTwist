@@ -15,6 +15,20 @@ type GuestLoginResponse = {
   };
 };
 
+type DouyinLoginResult = {
+  code?: string;
+  anonymousCode?: string;
+  anonymous_code?: string;
+};
+
+type DouyinApi = {
+  login?: (options: {
+    force?: boolean;
+    success?: (result: DouyinLoginResult) => void;
+    fail?: (error: unknown) => void;
+  }) => void;
+};
+
 @ccclass("LoadingPercentLabel")
 export class LoadingPercentLabel extends Component {
   @property({ type: Label, displayName: "百分比文本" })
@@ -35,17 +49,23 @@ export class LoadingPercentLabel extends Component {
   @property({ displayName: "加载完成后切场景" })
   public loadSceneWhenComplete = false;
 
-  @property({ displayName: "启动时游客登录" })
+  @property({ displayName: "启动时登录" })
   public guestLoginOnStart = true;
 
-  @property({ displayName: "后端服务地址" })
-  public backendBaseUrl = "http://localhost:8000";
+  @property({ displayName: "接口前缀" })
+  public apiBaseUrl = "http://localhost:8000";
 
   @property({ displayName: "登录接口路径" })
   public loginApiPath = "/api/auth/douyin-login";
 
   @property({ displayName: "抖音AppId" })
   public appId = "";
+
+  @property({ displayName: "抖音强制登录" })
+  public forceDouyinLogin = true;
+
+  @property({ displayName: "非抖音环境允许游客" })
+  public allowDevGuestLogin = true;
 
   @property({ displayName: "客户端版本" })
   public clientVersion = "dev";
@@ -70,11 +90,11 @@ export class LoadingPercentLabel extends Component {
 
     this.isStarting = true;
     ApiService.configure({
-      localBaseUrl: this.backendBaseUrl,
+      baseUrl: this.apiBaseUrl,
     });
 
     if (this.guestLoginOnStart) {
-      const loginSuccess = await this.loginAsGuest();
+      const loginSuccess = await this.loginOnStart();
       if (!loginSuccess && !this.continueWhenLoginFailed) {
         return;
       }
@@ -160,7 +180,75 @@ export class LoadingPercentLabel extends Component {
     );
   }
 
-  private async loginAsGuest() {
+  private async loginOnStart() {
+    const tt = this.getDouyinApi();
+    if (typeof tt?.login === "function") {
+      const douyinLogin = await this.tryDouyinLogin(tt);
+      if (!douyinLogin) {
+        return false;
+      }
+
+      return this.loginWithDouyinCode(douyinLogin);
+    }
+
+    if (!this.allowDevGuestLogin) {
+      warn("LoadingPercentLabel: Douyin login is unavailable and dev guest login is disabled.");
+      return false;
+    }
+
+    return this.loginAsDevGuest();
+  }
+
+  private async tryDouyinLogin(tt: DouyinApi) {
+    try {
+      const result = await new Promise<DouyinLoginResult>((resolve, reject) => {
+        tt.login?.({
+          force: this.forceDouyinLogin,
+          success: resolve,
+          fail: reject,
+        });
+      });
+
+      if (!result.code) {
+        warn("LoadingPercentLabel: Douyin login returned empty code.");
+        return null;
+      }
+
+      return result;
+    } catch (error) {
+      warn(`LoadingPercentLabel: Douyin login failed, ${String(error)}.`);
+      return null;
+    }
+  }
+
+  private async loginWithDouyinCode(loginResult: DouyinLoginResult) {
+    try {
+      const result = await ApiService.requestJson<GuestLoginResponse>(
+        this.loginApiPath,
+        {
+          method: "POST",
+          body: {
+            code: loginResult.code,
+            anonymousCode: loginResult.anonymousCode ?? loginResult.anonymous_code ?? "",
+            appId: this.appId,
+            clientVersion: this.clientVersion,
+          },
+        },
+      );
+      if (result.code !== 0 || !result.data) {
+        warn(`LoadingPercentLabel: Douyin login failed, ${result.message ?? "unknown error"}.`);
+        return false;
+      }
+
+      this.saveLoginData(result.data);
+      return true;
+    } catch (error) {
+      warn(`LoadingPercentLabel: Douyin login request failed, ${String(error)}.`);
+      return false;
+    }
+  }
+
+  private async loginAsDevGuest() {
     const guestCode = this.getOrCreateGuestCode();
 
     try {
@@ -170,6 +258,7 @@ export class LoadingPercentLabel extends Component {
           method: "POST",
           body: {
             code: guestCode,
+            devGuest: true,
             userInfo: {
               nickName: "游客",
               avatarUrl: "",
@@ -195,6 +284,10 @@ export class LoadingPercentLabel extends Component {
       warn(`LoadingPercentLabel: guest login request failed, ${String(error)}.`);
       return false;
     }
+  }
+
+  private getDouyinApi() {
+    return (globalThis as unknown as { tt?: DouyinApi }).tt;
   }
 
   private getOrCreateGuestCode() {

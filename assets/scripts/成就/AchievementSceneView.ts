@@ -136,9 +136,6 @@ export class AchievementSceneView extends Component {
   @property({ displayName: "自动加载后端成就" })
   public autoLoadRemoteAchievements = true;
 
-  @property({ displayName: "后端服务地址" })
-  public backendBaseUrl = "http://localhost:8000";
-
   @property({ displayName: "成就列表接口路径" })
   public achievementListApiPath = "/api/achievements";
 
@@ -169,9 +166,6 @@ export class AchievementSceneView extends Component {
 
   start() {
     this.prepareSceneTemplates();
-    ApiService.configure({
-      localBaseUrl: this.backendBaseUrl,
-    });
     this.prepareListView();
     this.bindTabs();
     this.bindBackButton();
