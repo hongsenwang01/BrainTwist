@@ -6,17 +6,30 @@ import {
   Node,
   Sprite,
   SpriteFrame,
-  UITransform,
+  sys,
   Vec3,
+  warn,
 } from "cc";
+import { ApiService } from "../工具/ApiService";
 
 const { ccclass, property } = _decorator;
 
 export type LeaderboardRowData = {
   rank: number;
+  userId?: string;
   nickname: string;
   score: number;
   avatarIndex?: number;
+  avatarUrl?: string;
+};
+
+type LeaderboardResponse = {
+  code: number;
+  message?: string;
+  data?: {
+    items?: LeaderboardRowData[];
+    currentUser?: LeaderboardRowData | null;
+  };
 };
 
 const RANK_LABEL_KEYS = ["排名", "名次", "rank"];
@@ -28,6 +41,60 @@ const AVATAR_NODE_KEYS = ["头像", "avatar", "head"];
 export class LeaderboardListView extends Component {
   @property({ type: Node, displayName: "4-10名胶囊模板" })
   public rowTemplate: Node | null = null;
+
+  @property({ type: [Node], displayName: "前三名节点" })
+  public topRankNodes: Node[] = [];
+
+  @property({ type: Sprite, displayName: "第一名头像" })
+  public firstAvatar: Sprite | null = null;
+
+  @property({ type: Label, displayName: "第一名昵称" })
+  public firstNicknameLabel: Label | null = null;
+
+  @property({ type: Label, displayName: "第一名分数" })
+  public firstScoreLabel: Label | null = null;
+
+  @property({ type: Sprite, displayName: "第二名头像" })
+  public secondAvatar: Sprite | null = null;
+
+  @property({ type: Label, displayName: "第二名昵称" })
+  public secondNicknameLabel: Label | null = null;
+
+  @property({ type: Label, displayName: "第二名分数" })
+  public secondScoreLabel: Label | null = null;
+
+  @property({ type: Sprite, displayName: "第三名头像" })
+  public thirdAvatar: Sprite | null = null;
+
+  @property({ type: Label, displayName: "第三名昵称" })
+  public thirdNicknameLabel: Label | null = null;
+
+  @property({ type: Label, displayName: "第三名分数" })
+  public thirdScoreLabel: Label | null = null;
+
+  @property({ type: Node, displayName: "本人胶囊" })
+  public selfRow: Node | null = null;
+
+  @property({ displayName: "后端服务地址" })
+  public backendBaseUrl = "http://localhost:8000";
+
+  @property({ displayName: "排行榜接口路径" })
+  public leaderboardApiPath = "/api/leaderboard";
+
+  @property({ displayName: "自动加载排行榜" })
+  public autoLoadRemoteLeaderboard = true;
+
+  @property({ displayName: "游戏标识" })
+  public gameKey = "reverse_brain";
+
+  @property({ displayName: "游戏模式" })
+  public gameMode = "classic";
+
+  @property({ displayName: "难度" })
+  public difficulty = "normal";
+
+  @property({ displayName: "榜单分组" })
+  public seasonKey = "global";
 
   @property({ displayName: "起始名次" })
   public startRank = 4;
@@ -50,21 +117,27 @@ export class LeaderboardListView extends Component {
   @property({ type: [SpriteFrame], displayName: "默认游客头像" })
   public defaultAvatarFrames: SpriteFrame[] = [];
 
-  @property({ displayName: "头像宽高" })
-  public avatarSize = 42;
-
   private rows: Node[] = [];
   private rowData: LeaderboardRowData[] = [];
 
   start() {
+    ApiService.configure({
+      localBaseUrl: this.backendBaseUrl,
+    });
+
     if (this.buildOnStart) {
       this.build();
+    }
+
+    if (this.autoLoadRemoteLeaderboard) {
+      void this.loadRemoteLeaderboard();
     }
   }
 
   public setRows(rows: LeaderboardRowData[]) {
     this.rowData = rows.map((row) => ({
       rank: Math.max(1, Math.floor(row.rank)),
+      userId: row.userId,
       nickname: row.nickname || "游客",
       score: Math.max(0, Math.floor(row.score)),
       avatarIndex: row.avatarIndex === undefined
@@ -119,6 +192,63 @@ export class LeaderboardListView extends Component {
     }
   }
 
+  private async loadRemoteLeaderboard() {
+    try {
+      const userId = sys.localStorage.getItem("brain_twist_user_id") || "";
+      const result = await ApiService.requestJson<LeaderboardResponse>(
+        this.leaderboardApiPath,
+        {
+          method: "GET",
+          query: {
+            userId,
+            gameKey: this.gameKey,
+            gameMode: this.gameMode,
+            difficulty: this.difficulty,
+            seasonKey: this.seasonKey,
+            limit: 10,
+          },
+        },
+      );
+
+      if (result.code !== 0 || !result.data?.items) {
+        warn(`LeaderboardListView: request failed, ${result.message ?? "unknown error"}.`);
+        return;
+      }
+
+      this.applyLeaderboard(result.data.items, result.data.currentUser ?? null);
+    } catch (error) {
+      warn(`LeaderboardListView: request failed, ${String(error)}.`);
+    }
+  }
+
+  private applyLeaderboard(items: LeaderboardRowData[], currentUser: LeaderboardRowData | null) {
+    const sortedItems = items
+      .map((item) => this.normalizeRowData(item))
+      .sort((a, b) => a.rank - b.rank);
+
+    this.fillTopRows(sortedItems.slice(0, 3));
+    this.setRows(sortedItems.filter((item) => item.rank >= this.startRank));
+
+    const selfRow = this.getSelfRow();
+    if (currentUser && selfRow) {
+      this.fillRow(selfRow, this.normalizeRowData(currentUser));
+    }
+  }
+
+  private fillTopRows(items: LeaderboardRowData[]) {
+    const topNodes = this.getTopRankNodes();
+    items.forEach((item) => {
+      const viewIndex = item.rank - 1;
+      const node = topNodes[viewIndex];
+      if (!node || !item) {
+        return;
+      }
+
+      node.active = true;
+      this.fillTopRank(viewIndex, node, item);
+    });
+  }
+
   private createRow(template: Node, index: number) {
     const row = instantiate(template);
     row.parent = template.parent ?? this.node;
@@ -146,7 +276,7 @@ export class LeaderboardListView extends Component {
       } else if (this.includesAny(nodeName, NAME_LABEL_KEYS)) {
         label.string = data.nickname;
       } else if (this.includesAny(nodeName, SCORE_LABEL_KEYS)) {
-        label.string = `${data.score}`;
+        label.string = this.formatScore(data.score);
       }
     }
 
@@ -160,15 +290,81 @@ export class LeaderboardListView extends Component {
       if (this.includesAny(nodeName, AVATAR_NODE_KEYS)) {
         sprite.spriteFrame = avatarFrame;
         sprite.sizeMode = Sprite.SizeMode.CUSTOM;
-        this.resizeAvatar(sprite.node);
       }
     }
   }
 
-  private resizeAvatar(node: Node) {
-    const size = Math.max(1, this.avatarSize);
-    const transform = node.getComponent(UITransform) ?? node.addComponent(UITransform);
-    transform.setContentSize(size, size);
+  private fillTopRank(index: number, root: Node, data: LeaderboardRowData) {
+    const view = this.getTopRankView(index, root);
+    const avatarFrame = this.getAvatarFrame(data);
+
+    if (view.avatar && avatarFrame) {
+      view.avatar.spriteFrame = avatarFrame;
+      view.avatar.sizeMode = Sprite.SizeMode.CUSTOM;
+    }
+
+    if (view.nicknameLabel) {
+      view.nicknameLabel.string = data.nickname;
+    }
+
+    if (view.scoreLabel) {
+      view.scoreLabel.string = this.formatScore(data.score);
+    }
+  }
+
+  private getTopRankView(index: number, root: Node) {
+    const configuredViews = [
+      {
+        avatar: this.firstAvatar,
+        nicknameLabel: this.firstNicknameLabel,
+        scoreLabel: this.firstScoreLabel,
+      },
+      {
+        avatar: this.secondAvatar,
+        nicknameLabel: this.secondNicknameLabel,
+        scoreLabel: this.secondScoreLabel,
+      },
+      {
+        avatar: this.thirdAvatar,
+        nicknameLabel: this.thirdNicknameLabel,
+        scoreLabel: this.thirdScoreLabel,
+      },
+    ];
+
+    const configuredView = configuredViews[index];
+    return {
+      avatar: configuredView?.avatar ?? this.findSpriteByName(root, AVATAR_NODE_KEYS),
+      nicknameLabel: configuredView?.nicknameLabel ?? this.findLabelByName(root, NAME_LABEL_KEYS),
+      scoreLabel: configuredView?.scoreLabel ?? this.findLabelByName(root, SCORE_LABEL_KEYS),
+    };
+  }
+
+  private normalizeRowData(row: LeaderboardRowData) {
+    return {
+      ...row,
+      rank: Math.max(1, Math.floor(row.rank)),
+      nickname: row.nickname || "游客",
+      score: Math.max(0, Math.floor(row.score)),
+      avatarIndex: row.avatarIndex === undefined
+        ? this.getRandomAvatarIndex()
+        : this.normalizeAvatarIndex(row.avatarIndex),
+    };
+  }
+
+  private getTopRankNodes() {
+    if (this.topRankNodes.length > 0) {
+      return this.topRankNodes;
+    }
+
+    return [
+      this.findNode("第一名"),
+      this.findNode("第二名"),
+      this.findNode("第三名") ?? this.findNode("第三明"),
+    ].filter((node): node is Node => Boolean(node));
+  }
+
+  private getSelfRow() {
+    return this.selfRow ?? this.findNode("排行榜-本人胶囊");
   }
 
   private getAvatarFrame(data: LeaderboardRowData) {
@@ -201,5 +397,48 @@ export class LeaderboardListView extends Component {
 
   private includesAny(value: string, keys: string[]) {
     return keys.some((key) => value.includes(key.toLowerCase()));
+  }
+
+  private formatScore(score: number) {
+    return Math.max(0, Math.floor(score))
+      .toString()
+      .replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  }
+
+  private findNode(name: string, root = this.node): Node | null {
+    if (root.name === name) {
+      return root;
+    }
+
+    for (const child of root.children) {
+      const found = this.findNode(name, child);
+      if (found) {
+        return found;
+      }
+    }
+
+    return null;
+  }
+
+  private findLabelByName(root: Node, keys: string[]) {
+    for (const label of root.getComponentsInChildren(Label)) {
+      const nodeName = label.node.name.toLowerCase();
+      if (this.includesAny(nodeName, keys)) {
+        return label;
+      }
+    }
+
+    return null;
+  }
+
+  private findSpriteByName(root: Node, keys: string[]) {
+    for (const sprite of root.getComponentsInChildren(Sprite)) {
+      const nodeName = sprite.node.name.toLowerCase();
+      if (this.includesAny(nodeName, keys)) {
+        return sprite;
+      }
+    }
+
+    return null;
   }
 }
