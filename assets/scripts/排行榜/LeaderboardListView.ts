@@ -1,12 +1,15 @@
 import {
   _decorator,
+  assetManager,
   Component,
+  ImageAsset,
   instantiate,
   Label,
   Node,
   Sprite,
   SpriteFrame,
   sys,
+  Texture2D,
   Vec3,
   warn,
 } from "cc";
@@ -21,6 +24,7 @@ export type LeaderboardRowData = {
   score: number;
   avatarIndex?: number;
   avatarUrl?: string;
+  avatar_url?: string;
 };
 
 type LeaderboardResponse = {
@@ -119,6 +123,7 @@ export class LeaderboardListView extends Component {
 
   private rows: Node[] = [];
   private rowData: LeaderboardRowData[] = [];
+  private remoteAvatarFrames = new Map<string, SpriteFrame>();
 
   start() {
     ApiService.configure({
@@ -140,6 +145,7 @@ export class LeaderboardListView extends Component {
       userId: row.userId,
       nickname: row.nickname || "游客",
       score: Math.max(0, Math.floor(row.score)),
+      avatarUrl: this.normalizeAvatarUrl(row),
       avatarIndex: row.avatarIndex === undefined
         ? this.getRandomAvatarIndex()
         : this.normalizeAvatarIndex(row.avatarIndex),
@@ -280,27 +286,19 @@ export class LeaderboardListView extends Component {
       }
     }
 
-    const avatarFrame = this.getAvatarFrame(data);
-    if (!avatarFrame) {
-      return;
-    }
-
     for (const sprite of row.getComponentsInChildren(Sprite)) {
       const nodeName = sprite.node.name.toLowerCase();
       if (this.includesAny(nodeName, AVATAR_NODE_KEYS)) {
-        sprite.spriteFrame = avatarFrame;
-        sprite.sizeMode = Sprite.SizeMode.CUSTOM;
+        this.applyAvatarSprite(sprite, data);
       }
     }
   }
 
   private fillTopRank(index: number, root: Node, data: LeaderboardRowData) {
     const view = this.getTopRankView(index, root);
-    const avatarFrame = this.getAvatarFrame(data);
 
-    if (view.avatar && avatarFrame) {
-      view.avatar.spriteFrame = avatarFrame;
-      view.avatar.sizeMode = Sprite.SizeMode.CUSTOM;
+    if (view.avatar) {
+      this.applyAvatarSprite(view.avatar, data);
     }
 
     if (view.nicknameLabel) {
@@ -345,6 +343,7 @@ export class LeaderboardListView extends Component {
       rank: Math.max(1, Math.floor(row.rank)),
       nickname: row.nickname || "游客",
       score: Math.max(0, Math.floor(row.score)),
+      avatarUrl: this.normalizeAvatarUrl(row),
       avatarIndex: row.avatarIndex === undefined
         ? this.getRandomAvatarIndex()
         : this.normalizeAvatarIndex(row.avatarIndex),
@@ -376,6 +375,66 @@ export class LeaderboardListView extends Component {
       ? this.getRandomAvatarIndex()
       : this.normalizeAvatarIndex(data.avatarIndex);
     return this.defaultAvatarFrames[avatarIndex] ?? this.defaultAvatarFrames[0];
+  }
+
+  private normalizeAvatarUrl(row: LeaderboardRowData) {
+    return String(row.avatarUrl || row.avatar_url || "").trim();
+  }
+
+  private applyAvatarSprite(sprite: Sprite, data: LeaderboardRowData) {
+    const fallbackFrame = this.getAvatarFrame(data);
+    if (fallbackFrame) {
+      sprite.spriteFrame = fallbackFrame;
+    }
+    sprite.sizeMode = Sprite.SizeMode.CUSTOM;
+
+    const avatarUrl = this.normalizeAvatarUrl(data);
+    if (!avatarUrl) {
+      return;
+    }
+
+    const cachedFrame = this.remoteAvatarFrames.get(avatarUrl);
+    if (cachedFrame) {
+      sprite.spriteFrame = cachedFrame;
+      return;
+    }
+
+    assetManager.loadRemote<ImageAsset>(
+      avatarUrl,
+      { ext: this.getRemoteImageExtension(avatarUrl) },
+      (error, imageAsset) => {
+        if (error || !imageAsset) {
+          if (error) {
+            warn(`LeaderboardListView: avatar load failed, ${String(error)}.`);
+          }
+          return;
+        }
+
+        const texture = new Texture2D();
+        texture.image = imageAsset;
+        const spriteFrame = new SpriteFrame();
+        spriteFrame.texture = texture;
+        this.remoteAvatarFrames.set(avatarUrl, spriteFrame);
+
+        if (sprite.isValid) {
+          sprite.spriteFrame = spriteFrame;
+          sprite.sizeMode = Sprite.SizeMode.CUSTOM;
+        }
+      },
+    );
+  }
+
+  private getRemoteImageExtension(url: string) {
+    const cleanUrl = url.split("?")[0].split("#")[0].toLowerCase();
+    if (cleanUrl.endsWith(".jpg") || cleanUrl.endsWith(".jpeg")) {
+      return ".jpg";
+    }
+
+    if (cleanUrl.endsWith(".webp")) {
+      return ".webp";
+    }
+
+    return ".png";
   }
 
   private getRandomAvatarIndex() {
