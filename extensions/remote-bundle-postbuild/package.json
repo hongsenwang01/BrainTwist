@@ -1,0 +1,11 @@
+{
+  "name": "remote-bundle-postbuild",
+  "title": "Remote Bundle Postbuild",
+  "package_version": 2,
+  "version": "1.0.0",
+  "author": "BrainTwist",
+  "description": "Moves the remoteScenes bundle out of the ByteDance mini-game main package after build.",
+  "contributions": {
+    "builder": "./dist/builder.js"
+  }
+}
