@@ -1,5 +1,6 @@
 import { _decorator, Component, director, Label, sys, warn } from "cc";
 import { ApiService } from "../工具/ApiService";
+import { RemoteSceneLoader } from "../工具/RemoteSceneLoader";
 
 const { ccclass, property } = _decorator;
 
@@ -149,7 +150,7 @@ export class LoadingPercentLabel extends Component {
       this.isPreviewPlaying = false;
 
       if (this.loadSceneWhenComplete && this.preloadSceneName) {
-        director.loadScene(this.preloadSceneName);
+        RemoteSceneLoader.loadScene(this.preloadSceneName);
       }
     }
   }
@@ -199,7 +200,7 @@ export class LoadingPercentLabel extends Component {
         this.setProgress(1);
 
         if (this.loadSceneWhenComplete) {
-          director.loadScene(sceneName);
+          RemoteSceneLoader.loadScene(sceneName);
         }
       },
     );

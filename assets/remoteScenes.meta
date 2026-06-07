@@ -1,0 +1,20 @@
+{
+  "ver": "1.2.0",
+  "importer": "directory",
+  "imported": true,
+  "uuid": "b7a3d1ce-d4e4-4d25-a88f-79a4980b3b42",
+  "files": [],
+  "subMetas": {},
+  "userData": {
+    "isBundle": true,
+    "bundleConfigID": "default",
+    "bundleName": "remoteScenes",
+    "priority": 7,
+    "compressionType": {
+      "bytedance-mini-game": "merge_dep"
+    },
+    "isRemoteBundle": {
+      "bytedance-mini-game": true
+    }
+  }
+}

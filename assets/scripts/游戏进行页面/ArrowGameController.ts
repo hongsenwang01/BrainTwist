@@ -5,7 +5,6 @@ import {
   Button,
   Color,
   Component,
-  director,
   isValid,
   Label,
   Node,
@@ -33,6 +32,7 @@ import { BottomGlowParticleEmitter } from "./BottomGlowParticleEmitter";
 import { ScoreGainPopup } from "./ScoreGainPopup";
 import { GameResultStore } from "../工具/GameResultStore";
 import { TextLetterSpacing } from "../工具/TextLetterSpacing";
+import { RemoteSceneLoader } from "../工具/RemoteSceneLoader";
 import { GameSettings } from "../设置/GameSettings";
 import { DouyinRewardedVideoAd } from "../工具/DouyinRewardedVideoAd";
 
@@ -437,7 +437,7 @@ export class ArrowGameController extends Component {
       return;
     }
 
-    director.loadScene(this.homeSceneName);
+    RemoteSceneLoader.loadScene(this.homeSceneName);
   }
 
   public handleDirectionClick(
@@ -1735,6 +1735,6 @@ export class ArrowGameController extends Component {
       return;
     }
 
-    director.loadScene(this.gameSummarySceneName);
+    RemoteSceneLoader.loadScene(this.gameSummarySceneName);
   }
 }

@@ -10,13 +10,13 @@ import {
   SpriteFrame,
   UITransform,
   Vec3,
-  director,
   instantiate,
   resources,
   sys,
   warn,
 } from "cc";
 import { ApiService } from "../工具/ApiService";
+import { RemoteSceneLoader } from "../工具/RemoteSceneLoader";
 
 const { ccclass, property } = _decorator;
 
@@ -170,7 +170,7 @@ export class AchievementSceneView extends Component {
     this.bindTabs();
     this.bindBackButton();
 
-    resources.loadDir("textures/achievements", SpriteFrame, (error, frames) => {
+    this.loadAchievementFrames((error, frames) => {
       if (error) {
         warn(`AchievementSceneView: load achievement textures failed, ${error.message}`);
       }
@@ -322,8 +322,21 @@ export class AchievementSceneView extends Component {
 
     const button = node.getComponent(Button) ?? node.addComponent(Button);
     node.off(Button.EventType.CLICK);
-    node.on(Button.EventType.CLICK, () => director.loadScene("游戏首页"), this);
+    node.on(Button.EventType.CLICK, () => RemoteSceneLoader.loadScene("游戏首页"), this);
     button.transition = Button.Transition.NONE;
+  }
+
+  private loadAchievementFrames(callback: (error: Error | null, frames?: SpriteFrame[]) => void) {
+    RemoteSceneLoader.loadRemoteBundle((bundle) => {
+      bundle.loadDir("textures/achievements", SpriteFrame, (bundleError, frames) => {
+        if (!bundleError) {
+          callback(null, frames);
+          return;
+        }
+
+        resources.loadDir("textures/achievements", SpriteFrame, callback);
+      });
+    });
   }
 
   private selectCategory(category: AchievementCategory) {

@@ -1,4 +1,5 @@
-import { _decorator, Button, Component, director, warn } from "cc";
+import { _decorator, Button, Component, warn } from "cc";
+import { RemoteSceneLoader } from "./RemoteSceneLoader";
 
 const { ccclass, property } = _decorator;
 
@@ -26,6 +27,6 @@ export class SceneLoadButton extends Component {
       return;
     }
 
-    director.loadScene(this.sceneName);
+    RemoteSceneLoader.loadScene(this.sceneName);
   }
 }

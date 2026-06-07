@@ -1,0 +1,93 @@
+{
+  "name": "BrainTwist",
+  "server": "https://objectstorageapi.hzh.sealos.run/iq8hgkhc-braintwist/brain-twist/v1/",
+  "engineModulesConfigKey": "defaultConfig",
+  "platform": "bytedance-mini-game",
+  "buildPath": "project://build",
+  "debug": false,
+  "buildMode": "normal",
+  "mangleProperties": false,
+  "md5Cache": false,
+  "skipCompressTexture": false,
+  "sourceMaps": false,
+  "overwriteProjectSettings": {
+    "macroConfig": {
+      "cleanupImageCache": "inherit-project-setting"
+    },
+    "includeModules": {
+      "physics": "inherit-project-setting",
+      "physics-2d": "inherit-project-setting",
+      "gfx-webgl2": "off"
+    }
+  },
+  "nativeCodeBundleMode": "both",
+  "polyfills": {
+    "asyncFunctions": false
+  },
+  "experimentalEraseModules": false,
+  "startSceneAssetBundle": false,
+  "bundleConfigs": [
+    {
+      "name": "remoteScenes",
+      "root": "db://assets/remoteScenes",
+      "priority": 7,
+      "compressionType": "merge_dep",
+      "isRemote": true,
+      "output": true
+    }
+  ],
+  "inlineEnum": true,
+  "useBuiltinServer": false,
+  "md5CacheOptions": {
+    "excludes": [],
+    "includes": [],
+    "replaceOnly": [],
+    "handleTemplateMd5Link": true
+  },
+  "mainBundleIsRemote": false,
+  "mainBundleCompressionType": "merge_dep",
+  "useSplashScreen": true,
+  "bundleCommonChunk": false,
+  "packAutoAtlas": true,
+  "startScene": "70bca9ce-2d84-400d-9768-e8b2f61f6668",
+  "outputName": "bytedance-mini-game",
+  "taskName": "bytedance-mini-game",
+  "scenes": [
+    {
+      "url": "db://assets/\u521d\u59cb\u5316\u52a0\u8f7d.scene",
+      "uuid": "70bca9ce-2d84-400d-9768-e8b2f61f6668"
+    },
+    {
+      "url": "db://assets/\u6e38\u620f\u9996\u9875.scene",
+      "uuid": "efedc9bd-9af2-4f3e-a7a8-1394fbde6edb"
+    }
+  ],
+  "wasmCompressionMode": false,
+  "binGroupConfig": {
+    "threshold": 16,
+    "enable": false
+  },
+  "packages": {
+    "bytedance-mini-game": {
+      "buildOpenDataContextTemplate": false,
+      "appid": "tt35d1436cabb6009202",
+      "orientation": "portrait",
+      "physX": {
+        "use": "project",
+        "notPackPhysXLibs": false,
+        "multiThread": false,
+        "subThreadCount": 1,
+        "epsilon": 0.001
+      },
+      "devToolsLaunchMethod": "lite",
+      "separateEngine": false,
+      "__version__": "1.0.3"
+    },
+    "cocos-service": {
+      "configID": "2c1d94",
+      "services": [],
+      "__version__": "3.0.9"
+    }
+  },
+  "__version__": "1.3.9"
+}

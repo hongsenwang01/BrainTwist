@@ -6,7 +6,6 @@ import {
   Button,
   Color,
   Component,
-  director,
   Graphics,
   Label,
   Node,
@@ -20,6 +19,7 @@ import {
 import { GameTimerLabel } from "../游戏进行页面/GameTimerLabel";
 import { PauseOverlay } from "../游戏进行页面/PauseOverlay";
 import { GameResultStore } from "../工具/GameResultStore";
+import { RemoteSceneLoader } from "../工具/RemoteSceneLoader";
 import { GameSettings } from "../设置/GameSettings";
 
 const { ccclass, property } = _decorator;
@@ -151,7 +151,7 @@ export class NumberHuntController extends Component {
       return;
     }
 
-    director.loadScene(this.homeSceneName);
+    RemoteSceneLoader.loadScene(this.homeSceneName);
   }
 
   private setupScene() {
@@ -397,7 +397,7 @@ export class NumberHuntController extends Component {
     this.saveGameResult(completed);
 
     if (this.loadSummarySceneOnEnd) {
-      director.loadScene(this.gameSummarySceneName);
+      RemoteSceneLoader.loadScene(this.gameSummarySceneName);
     }
   }
 
